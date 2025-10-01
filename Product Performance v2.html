@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Products Performance Analysis</title>
+
+<!-- Libraries (CDN) -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/plugin/customParseFormat.js"></script>
+<script>dayjs.extend(dayjs_plugin_customParseFormat);</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- Styling -->
+<style>
+  :root { --brand-yellow:#ffd670; --brand-purple:#45377f; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin:24px; background:#0f1115; color:#e9ecf1; }
+  h1,h2,h3{ margin:6px 0 10px; }
+  h1{ font-size:24px; color:var(--brand-yellow); }
+  h2{ font-size:18px; color:#fff; border-left:6px solid var(--brand-purple); padding-left:10px; }
+  .row{ display:grid; grid-template-columns:repeat(12,1fr); gap:16px; margin-bottom:16px; }
+  .card{ grid-column:span 12; background:#171a21; border:1px solid #232a34; border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.25); }
+  .card.accent{ border-color:var(--brand-purple); }
+  .controls{ display:grid; grid-template-columns:repeat(12,1fr); gap:12px; }
+  .control{ grid-column:span 12; display:flex; flex-direction:column; gap:8px; }
+  .control.third{ grid-column:span 4; }
+  .control.half{ grid-column:span 6; }
+  input[type="file"],select,input[type="number"],input[type="text"]{
+    background:#0c0f14; border:1px solid #2a3240; border-radius:10px; padding:10px; color:#e9ecf1;
+  }
+  .btn{ background:linear-gradient(135deg,var(--brand-yellow),#f5c140); color:#111; font-weight:700; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; }
+  .btn.secondary{ background:#0c0f14; color:#e9ecf1; border:1px solid #2a3240; }
+  .btn:disabled{ filter:grayscale(.5); cursor:not-allowed; }
+  .kpi-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+  .kpi{ background:#0c0f14; border:1px solid #232a34; border-radius:12px; padding:10px; }
+  .kpi .label{ color:#9fb0c9; font-size:12px; }
+  .kpi .value{ font-size:18px; font-weight:700; color:#fff; margin-top:6px; }
+  .hint{ color:#9fb0c9; font-size:12px; }
+  .pill{ display:inline-block; padding:4px 10px; border-radius:999px; background:#0c0f14; border:1px solid #232a34; color:#9fb0c9; font-size:12px; margin-right:6px; }
+  canvas{ background:#0c0f14; border-radius:12px; }
+
+  /* Fixed-height charts */
+  .chart-fixed{ height:320px !important; max-height:320px !important; }
+
+  .table-wrap{ overflow:auto; max-height:380px; border:1px solid #232a34; border-radius:12px; }
+  table{ width:100%; border-collapse:collapse; }
+  th,td{ padding:8px 10px; border-bottom:1px solid #232a34; font-size:13px; }
+  th{ position:sticky; top:0; background:#0f1217; }
+
+  /* Latest prices panel */
+  .latest-wrap{ display:grid; grid-template-columns:repeat(12,1fr); gap:12px; }
+  .latest-box{ grid-column:span 12; background:#0c0f14; border:1px solid #2a3240; border-radius:12px; padding:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+  .latest-item{ margin:6px 10px; }
+  .latest-label{ color:#9fb0c9; font-size:12px; }
+  .latest-value{ font-weight:800; font-size:18px; color:#fff; }
+  .latest-date{ color:#9fb0c9; font-size:12px; }
+
+  footer{ margin-top:26px; text-align:center; color:#9fb0c9; font-size:12px; }
+</style>
+</head>
+<body>
+
+<h1>Products Performance Analysis</h1>
+
+<!-- Controls -->
+<div class="row">
+  <div class="card">
+    <div class="controls">
+      <div class="control third">
+        <label><strong>Upload Excel (.xlsx)</strong></label>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" />
+        <div class="hint">Headers needed: <small>Date, Product, NumItemSold_ALL, AvgSalePrice_ALL, AvgCostPrice_ALL, Margin_All, TotalMaxCurrentStock, AvgAdminCostPrice, AvgCachedListPrice</small></div>
+      </div>
+      <div class="control third">
+        <label><strong>Pick Product</strong></label>
+        <select id="productSelect" disabled>
+          <option value="__ALL__">All products</option>
+        </select>
+      </div>
+      <div class="control third">
+        <label><strong>Suggested AvgCachedListPrice (৳)</strong></label>
+        <input type="number" id="suggestedPrice" step="0.01" placeholder="Enter new price…" disabled />
+      </div>
+
+      <div class="control third">
+        <label><strong>Date Range (Optional)</strong></label>
+        <input type="text" id="dateFilter" placeholder="e.g., 2025-01-01 to 2025-09-30" />
+        <div class="hint">Leave blank to use full range. Format: <small>YYYY-MM-DD to YYYY-MM-DD</small></div>
+      </div>
+      <div class="control third">
+        <label><strong>Baseline Window (days) for 30-day forecast</strong></label>
+        <input type="number" id="baselineDays" value="14" min="7" max="90" />
+      </div>
+      <div class="control third" style="display:flex; gap:8px; align-items:end;">
+        <button class="btn" id="runBtn" disabled>Recalculate & Visualize</button>
+        <button class="btn secondary" id="clearBtn" disabled>Clear Filters</button>
+      </div>
+    </div>
+
+    <!-- Latest Prices -->
+    <div class="latest-wrap" style="margin-top:10px;">
+      <div class="latest-box">
+        <div class="latest-item">
+          <div class="latest-label">Latest for</div>
+          <div class="latest-value" id="latestProduct">—</div>
+          <div class="latest-date" id="latestDate">—</div>
+        </div>
+        <div class="latest-item">
+          <div class="latest-label">Latest AvgAdminCostPrice (৳)</div>
+          <div class="latest-value" id="latestAdmin">—</div>
+        </div>
+        <div class="latest-item">
+          <div class="latest-label">Latest AvgCachedListPrice (৳)</div>
+          <div class="latest-value" id="latestCached">—</div>
+        </div>
+        <div class="latest-item">
+          <div class="latest-label">Baseline Margin/Unit</div>
+          <div class="latest-value" id="latestBaselineMargin">—</div>
+        </div>
+        <div class="latest-item">
+          <div class="latest-label">Suggested Margin/Unit</div>
+          <div class="latest-value" id="latestSuggestedMargin">—</div>
+        </div>
+      </div>
+    </div>
+    <!-- /Latest Prices -->
+
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="row">
+  <div class="card accent">
+    <h2>Key Metrics (16)</h2>
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="hint" style="margin-top:8px">
+      <span class="pill">Baseline Margin = Last date's <strong>AvgAdminCostPrice</strong> vs last date's <strong>AvgCachedListPrice</strong></span>
+      <span class="pill">Suggested Margin = Last date's <strong>AvgAdminCostPrice</strong> vs your <strong>Suggested AvgCachedListPrice</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- Trend & comparison charts -->
+<div class="row">
+  <div class="card">
+    <h2>Selected Product — Trends (or Group Aggregate if “All products”)</h2>
+    <div class="row">
+      <div class="card" style="grid-column: span 4;">
+        <h3>Daily Units & Price</h3>
+        <canvas id="trendChart" class="chart-fixed"></canvas>
+      </div>
+      <div class="card" style="grid-column: span 4;">
+        <h3>Daily Stock vs Sales</h3>
+        <canvas id="stockSalesChart" class="chart-fixed"></canvas>
+      </div>
+      <div class="card" style="grid-column: span 4;">
+        <h3>Daily Margin% & Price</h3>
+        <canvas id="marginPriceChart" class="chart-fixed"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="card">
+    <h2>Group Comparisons</h2>
+    <div class="row">
+      <div class="card" style="grid-column: span 6;">
+        <h3>Sales & Margin Contribution — Top 10</h3>
+        <canvas id="contribChart" class="chart-fixed"></canvas>
+      </div>
+      <div class="card" style="grid-column: span 6;" id="cannibalCard">
+        <h3 id="cannibalTitle">Cannibalization vs Selected (Top 10 correlations)</h3>
+        <canvas id="cannibalBars" class="chart-fixed"></canvas>
+        <div class="hint" id="cannibalHint">More negative ρ ⇒ stronger cannibalization signal.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Deeper Insights -->
+<div class="row">
+  <div class="card">
+    <h2>Deeper Insights</h2>
+    <div class="row">
+      <div class="card" style="grid-column: span 4;">
+        <h3>Price vs Units (Scatter)</h3>
+        <canvas id="scatterChart" class="chart-fixed"></canvas>
+      </div>
+      <div class="card" style="grid-column: span 4;">
+        <h3>Rolling 7-day Revenue Trend</h3>
+        <canvas id="rollingRevChart" class="chart-fixed"></canvas>
+      </div>
+      <div class="card" style="grid-column: span 4;">
+        <h3>Margin % Distribution</h3>
+        <canvas id="marginHistChart" class="chart-fixed"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Details -->
+<div class="row">
+  <div class="card">
+    <h2>Details — Current Selection</h2>
+    <div class="table-wrap"><table id="detailTable"><thead></thead><tbody></tbody></table></div>
+    <div class="hint">“All products” rows are daily aggregates with weighted averages.</div>
+  </div>
+</div>
+
+<footer>© Analyst_Zakir | Email: dataanalystzakir@gmail.com</footer>
+<footer> </footer>
+
+<script>
+/* ---------------- Chart.js defaults ---------------- */
+Chart.defaults.responsive = true;
+Chart.defaults.maintainAspectRatio = false;   // CSS controls height
+Chart.defaults.resizeDelay = 200;             // throttle
+
+/* ---------------- Helpers ---------------- */
+const isNullLike = (v) => v===null || v===undefined || (typeof v==='string' && v.trim().toUpperCase()==='NULL') || (typeof v==='string' && v.trim()==='');
+const fmt = (n, d=2) => (n==null || isNaN(n)) ? '—' : Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmt0 = (n) => (n==null || isNaN(n)) ? '—' : Number(n).toLocaleString();
+const pct = (n) => (n==null || isNaN(n)) ? '—' : (n*100).toFixed(2) + '%';
+const parseNum = (v) => {
+  if (isNullLike(v)) return null;
+  if (typeof v === 'number') return v;
+  const s = String(v).replace(/,/g,'').trim();
+  if (s.toUpperCase()==='NULL' || s==='') return null;
+  const n = Number(s);
+  return isNaN(n) ? null : n;
+};
+
+// Excel serial → Date
+const excelSerialToDate = (v) => {
+  const ms = (v - 25569) * 86400 * 1000;
+  return new Date(ms);
+};
+
+const parseDate = (v) => {
+  if (isNullLike(v)) return null;
+  if (v instanceof Date) return v;
+  if (typeof v === 'number') return excelSerialToDate(v);     // Excel serial
+  // Explicit MM/DD/YYYY support
+  let d = dayjs(String(v).trim(), ['M/D/YYYY','MM/DD/YYYY','YYYY-MM-DD','M/D/YY','MM/DD/YY'], true);
+  if (!d.isValid()) d = dayjs(String(v).trim());
+  return d.isValid() ? d.toDate() : null;
+};
+
+const groupBy = (arr, key) => arr.reduce((acc,x)=>{ (acc[x[key]] = acc[x[key]] || []).push(x); return acc; }, {});
+const uniq = (arr) => [...new Set(arr)];
+const average = (a) => { const b=a.filter(x=>x!=null && !isNaN(x)); return b.length? b.reduce((s,x)=>s+x,0)/b.length : null; };
+
+/* ---------------- Global State ---------------- */
+let rawRows = [];
+let products = [];
+let charts = {};
+let groupAgg = [];
+
+/* ---------------- Load Excel ---------------- */
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data, {type:'array', cellDates:true});
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const json = XLSX.utils.sheet_to_json(sheet, {defval:null, raw:false, cellDates:true});
+
+  rawRows = json.map(r => ({
+    Date: parseDate(r.Date),
+    Product: r.Product,
+    PVID: isNullLike(r.PVID) ? null : r.PVID,
+    SoldInKg: parseNum(r.SoldInKg),
+    NumItemSold_ALL: parseNum(r.NumItemSold_ALL),
+    AmountOfSold_ALL: parseNum(r.AmountOfSold_ALL),
+    SaleAmountOfSold_ALL: parseNum(r.SaleAmountOfSold_ALL),
+    CostAmountOfSold_ALL: parseNum(r.CostAmountOfSold_ALL),
+    AvgSalePrice_ALL: parseNum(r.AvgSalePrice_ALL),
+    AvgCostPrice_ALL: parseNum(r.AvgCostPrice_ALL),
+    Margin_All: parseNum(r.Margin_All),
+    NumItemSold_Invent: parseNum(r.NumItemSold_Invent),
+    AmountOfSold_Invent: parseNum(r.AmountOfSold_Invent),
+    SaleAmountOfSold_Invent: parseNum(r.SaleAmountOfSold_Invent),
+    CostAmountOfSold_Invent: parseNum(r.CostAmountOfSold_Invent),
+    AvgSalePrice_Invent: parseNum(r.AvgSalePrice_Invent),
+    AvgCostPrice_Invent: parseNum(r.AvgCostPrice_Invent),
+    Margin_Invent: parseNum(r.Margin_Invent),
+    TotalMaxCurrentStock: parseNum(r.TotalMaxCurrentStock),
+    AvgAdminCostPrice: parseNum(r.AvgAdminCostPrice),
+    AvgCachedListPrice: parseNum(r.AvgCachedListPrice)
+  })).filter(r => r.Date && r.Product);
+
+  products = uniq(rawRows.map(r => r.Product)).sort((a,b)=>a.localeCompare(b));
+  const sel = document.getElementById('productSelect');
+  sel.innerHTML = `<option value="__ALL__">All products</option>` + products.map(p => `<option>${p}</option>`).join('');
+  sel.disabled = false;
+  document.getElementById('suggestedPrice').disabled = false;
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('clearBtn').disabled = false;
+
+  buildGroupAgg();
+  recalcAndRender();
+});
+
+document.getElementById('runBtn').addEventListener('click', recalcAndRender);
+document.getElementById('productSelect').addEventListener('change', recalcAndRender);
+document.getElementById('suggestedPrice').addEventListener('input', recalcAndRender);
+document.getElementById('dateFilter').addEventListener('change', recalcAndRender);
+document.getElementById('clearBtn').addEventListener('click', () => {
+  document.getElementById('productSelect').value = '__ALL__';
+  document.getElementById('dateFilter').value = '';
+  document.getElementById('suggestedPrice').value = '';
+  recalcAndRender();
+});
+
+/* ---------------- Core calcs ---------------- */
+function filterByDateRange(rows) {
+  const txt = (document.getElementById('dateFilter').value || '').trim();
+  if (!txt) return rows;
+  const m = txt.match(/^\s*(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})\s*$/i);
+  if (!m) return rows;
+  const start = dayjs(m[1],'YYYY-MM-DD').toDate();
+  const end = dayjs(m[2],'YYYY-MM-DD').toDate();
+  return rows.filter(r => r.Date >= start && r.Date <= end);
+}
+
+function buildGroupAgg() {
+  const byProd = groupBy(rawRows, 'Product');
+  groupAgg = Object.entries(byProd).map(([prod, rows]) => {
+    rows = rows.slice().sort((a,b)=>a.Date-b.Date);
+    const revenue = rows.reduce((s,r)=> s + (r.AmountOfSold_ALL ?? 0), 0);
+    const cost = rows.reduce((s,r)=> s + (r.CostAmountOfSold_ALL ?? 0), 0);
+    const units = rows.reduce((s,r)=> s + (r.NumItemSold_ALL ?? 0), 0);
+    const margin = revenue - cost;
+    return {Product: prod, revenue, cost, units, margin, rows};
+  });
+}
+
+/* aggregate daily when product = ALL; compute weighted averages for prices, admin, cached */
+function aggregateDaily(rows){
+  const byDay = {};
+  rows.forEach(r=>{
+    const key = dayjs(r.Date).format('YYYY-MM-DD');
+    if(!byDay[key]) byDay[key] = {Date:new Date(r.Date), units:0, revenue:0, cost:0, stock:0,
+                                  priceUnits:0, unitsForPrice:0,
+                                  adminUnits:0, unitsForAdmin:0,
+                                  cachedUnits:0, unitsForCached:0};
+    const d=byDay[key];
+    const units = (r.NumItemSold_ALL||0);
+    const price = r.AvgSalePrice_ALL;
+    const costAmt = (r.CostAmountOfSold_ALL||0);
+    d.units += units;
+    d.revenue += (r.AmountOfSold_ALL||0);
+    d.cost += costAmt;
+    d.stock += (r.TotalMaxCurrentStock||0);
+    if (price!=null && units>0) { d.priceUnits += price*units; d.unitsForPrice += units; }
+    if (r.AvgAdminCostPrice!=null && units>0) { d.adminUnits += r.AvgAdminCostPrice*units; d.unitsForAdmin += units; }
+    if (r.AvgCachedListPrice!=null && units>0) { d.cachedUnits += r.AvgCachedListPrice*units; d.unitsForCached += units; }
+  });
+  return Object.values(byDay).sort((a,b)=>a.Date-b.Date).map(d=>{
+    const avgPrice = d.unitsForPrice>0 ? d.priceUnits/d.unitsForPrice : null;
+    const avgCostPerUnit = (d.units>0) ? d.cost/d.units : null;
+    const marginPct = d.revenue>0 ? (d.revenue - d.cost)/d.revenue : null;
+    const avgAdmin = d.unitsForAdmin>0 ? d.adminUnits/d.unitsForAdmin : null;
+    const avgCached = d.unitsForCached>0 ? d.cachedUnits/d.unitsForCached : null;
+    return {
+      Date:d.Date,
+      NumItemSold_ALL:d.units,
+      AmountOfSold_ALL:d.revenue,
+      CostAmountOfSold_ALL:d.cost,
+      AvgSalePrice_ALL: avgPrice,
+      AvgCostPrice_ALL: avgCostPerUnit,
+      Margin_All: marginPct,
+      TotalMaxCurrentStock:d.stock,
+      AvgAdminCostPrice: avgAdmin,
+      AvgCachedListPrice: avgCached
+    };
+  });
+}
+
+function calcElasticity(rows) {
+  const xs=[], ys=[];
+  rows.forEach(r => {
+    const u=r.NumItemSold_ALL, p=r.AvgSalePrice_ALL;
+    if (!u || !p || u<=0 || p<=0) return;
+    const stk=r.TotalMaxCurrentStock;
+    if (stk && u/stk>0.9) return; // stock-constrained
+    xs.push(Math.log(p)); ys.push(Math.log(u));
+  });
+  if (xs.length<3) return null;
+  const n=xs.length, mx=xs.reduce((s,b)=>s+b,0)/n, my=ys.reduce((s,b)=>s+b,0)/n;
+  let num=0, den=0; for (let i=0;i<n;i++){ num+=(xs[i]-mx)*(ys[i]-my); den+=(xs[i]-mx)**2; }
+  return den===0? null : num/den;
+}
+
+function correlation(a,b){
+  const n=Math.min(a.length,b.length); if(n<2) return 0;
+  const ma=a.reduce((s,x)=>s+x,0)/n, mb=b.reduce((s,x)=>s+x,0)/n;
+  let num=0, da=0, db=0;
+  for(let i=0;i<n;i++){ const xa=a[i]-ma, xb=b[i]-mb; num+=xa*xb; da+=xa*xa; db+=xb*xb; }
+  const den=Math.sqrt(da*db); return den===0?0:num/den;
+}
+
+function computeKPIs(selectedRows, groupRows, selectedProduct, suggestedPrice) {
+  const rows = selectedRows.slice().sort((a,b)=>a.Date-b.Date);
+  const group = groupRows.slice().sort((a,b)=>a.Date-b.Date);
+
+  const totalRevenue = rows.reduce((s,r)=> s + (r.AmountOfSold_ALL || 0), 0);
+  const totalCost = rows.reduce((s,r)=> s + (r.CostAmountOfSold_ALL || 0), 0);
+  const totalUnits = rows.reduce((s,r)=> s + (r.NumItemSold_ALL || 0), 0);
+  const grossMargin = totalRevenue - totalCost;
+  const marginPct = totalRevenue>0 ? grossMargin/totalRevenue : null;
+
+  let stockOutDays=0, withStockDays=0;
+  rows.forEach(r=>{
+    if (r.TotalMaxCurrentStock!=null && r.NumItemSold_ALL!=null){
+      withStockDays++; if (r.TotalMaxCurrentStock>0 && r.NumItemSold_ALL/r.TotalMaxCurrentStock>0.9) stockOutDays++;
+    }
+  });
+
+  const last = rows[rows.length-1] || {};
+  const baseAdmin = last.AvgAdminCostPrice ?? null;
+  const baseCached = last.AvgCachedListPrice ?? null;
+
+  const baselineMarginTaka = (baseCached!=null && baseAdmin!=null) ? (baseCached - baseAdmin) : null;
+  const baselineMarginPct = (baseCached>0 && baselineMarginTaka!=null) ? baselineMarginTaka/baseCached : null;
+
+  const suggested = (suggestedPrice!=null && suggestedPrice>0) ? suggestedPrice : null;
+  const suggestedMarginTaka = (suggested!=null && baseAdmin!=null) ? (suggested - baseAdmin) : null;
+  const suggestedMarginPct = (suggested>0 && suggestedMarginTaka!=null) ? suggestedMarginTaka/suggested : null;
+
+  const groupRevenue = group.reduce((s,r)=> s + (r.AmountOfSold_ALL || 0), 0);
+  const groupMargin  = group.reduce((s,r)=> s + ((r.AmountOfSold_ALL||0)-(r.CostAmountOfSold_ALL||0)), 0);
+
+  const contribRevenuePct = groupRevenue>0 ? totalRevenue/groupRevenue : null;
+  const contribMarginPct  = groupMargin>0  ? grossMargin/groupMargin : null;
+
+  const unitSeries = rows.map(r=> r.NumItemSold_ALL || 0);
+  const mu = unitSeries.length? unitSeries.reduce((s,x)=>s+x,0)/unitSeries.length : 0;
+  const stdevUnits = unitSeries.length? Math.sqrt(unitSeries.reduce((s,x)=>s+(x-mu)*(x-mu),0)/unitSeries.length) : null;
+
+  const avgStock = average(rows.map(r=> r.TotalMaxCurrentStock || 0).filter(x=>x>0));
+  const invTurn = (avgStock && avgStock>0) ? (totalUnits / avgStock) : null;
+
+  const elasticity = (selectedProduct==='__ALL__') ? null : calcElasticity(rows);
+
+  const baseWindow = Math.max(7, Math.min(90, parseNum(document.getElementById('baselineDays').value) || 14));
+  const recentRows = rows.slice(-baseWindow);
+  const basePrice = average(recentRows.map(r=> r.AvgSalePrice_ALL || 0).filter(x=>x>0)) || baseCached || null;
+  const baseUnitsPerDay = average(recentRows.map(r=> r.NumItemSold_ALL || 0)) || 0;
+
+  const pNew = suggested || baseCached || basePrice || null;
+  const pBase = basePrice || pNew;
+
+  let unitsNewPerDay = baseUnitsPerDay;
+  if (elasticity!=null && pNew && pBase) {
+    unitsNewPerDay = baseUnitsPerDay * Math.pow(pNew/pBase, elasticity);
+  }
+  const admin = baseAdmin || average(recentRows.map(r=> r.AvgAdminCostPrice || 0).filter(x=>x>0)) || 0;
+
+  const daysHorizon=30;
+  const baseProfit30=(pBase-admin)*baseUnitsPerDay*daysHorizon;
+  const newProfit30 =(pNew -admin)*unitsNewPerDay*daysHorizon;
+  const deltaProfit = newProfit30 - baseProfit30;
+
+  let promoCost=0, roi=null;
+  if (pNew < pBase) { promoCost=(pBase-pNew)*unitsNewPerDay*daysHorizon; roi=promoCost>0? (deltaProfit/promoCost):null; }
+
+  return {
+    totalRevenue,totalCost,totalUnits,grossMargin,marginPct,
+    stockOutDays,withStockDays,
+    baselineMarginTaka,baselineMarginPct,suggestedMarginTaka,suggestedMarginPct,
+    contribRevenuePct,contribMarginPct,stdevUnits,invTurn,
+    elasticity,
+    pBase,pNew,baseUnitsPerDay,unitsNewPerDay,admin,
+    baseProfit30,newProfit30,deltaProfit,promoCost,roi,
+    lastDate: rows.length? rows[rows.length-1].Date:null,
+    lastAdmin: baseAdmin, lastCached: baseCached
+  };
+}
+
+/* ---------------- Rendering ---------------- */
+function recalcAndRender(){
+  if (!rawRows.length) return;
+  const prod = document.getElementById('productSelect').value || '__ALL__';
+  const suggestedPrice = parseNum(document.getElementById('suggestedPrice').value);
+  const filtered = filterByDateRange(rawRows);
+
+  const selectedRows = (prod==='__ALL__')
+    ? aggregateDaily(filtered)
+    : filtered.filter(r=> r.Product===prod).sort((a,b)=>a.Date-b.Date);
+
+  const groupRows = filtered;
+
+  if (prod!=='__ALL__' && (!suggestedPrice || isNaN(suggestedPrice)) && selectedRows.length){
+    const latest = filtered.filter(r=>r.Product===prod).sort((a,b)=>a.Date-b.Date).at(-1);
+    if (latest && latest.AvgCachedListPrice) document.getElementById('suggestedPrice').value = Number(latest.AvgCachedListPrice).toFixed(2);
+  }
+
+  const K = computeKPIs(
+    (prod==='__ALL__') ? selectedRows : filtered.filter(r=>r.Product===prod).sort((a,b)=>a.Date-b.Date),
+    groupRows, prod, parseNum(document.getElementById('suggestedPrice').value));
+
+  renderKPIs(K);
+  renderTrends(selectedRows);
+  renderStockVsSales(selectedRows);
+  renderMarginVsPrice(selectedRows);
+  renderGroupContrib(groupRows);
+  renderCannibalizationBars(groupRows, prod);
+  renderExtras(selectedRows);
+  renderDetailsTable((prod==='__ALL__') ? selectedRows : filtered.filter(r=>r.Product===prod).sort((a,b)=>a.Date-b.Date));
+
+  updateLatestPanel({
+    product: prod==='__ALL__' ? 'All products' : prod,
+    date: K.lastDate, admin: K.lastAdmin, cached: K.lastCached,
+    baselineMargin: (K.lastAdmin!=null && K.lastCached!=null) ? (K.lastCached - K.lastAdmin) : null,
+    suggestedMargin: (K.lastAdmin!=null && K.pNew!=null) ? (K.pNew - K.lastAdmin) : null
+  });
+}
+
+function updateLatestPanel(info){
+  const {product,date,admin,cached,baselineMargin,suggestedMargin} = info || {};
+  document.getElementById('latestProduct').textContent = product || '—';
+  document.getElementById('latestDate').textContent = date ? `Latest date: ${dayjs(date).format('YYYY-MM-DD')}` : (product==='All products' ? '— (aggregated)' : '—');
+  document.getElementById('latestAdmin').textContent = admin!=null ? fmt(admin,2) : '—';
+  document.getElementById('latestCached').textContent = cached!=null ? fmt(cached,2) : '—';
+  document.getElementById('latestBaselineMargin').textContent = baselineMargin!=null ? fmt(baselineMargin,2) : '—';
+  document.getElementById('latestSuggestedMargin').textContent = suggestedMargin!=null ? fmt(suggestedMargin,2) : '—';
+}
+
+function renderKPIs(K){
+  const kpi = [
+    {label:'Total Revenue (৳)', val: fmt(K.totalRevenue,2)},
+    {label:'Total Cost (৳)', val: fmt(K.totalCost,2)},
+    {label:'Gross Margin (৳)', val: fmt(K.grossMargin,2)},
+    {label:'Gross Margin %', val: pct(K.marginPct)},
+    {label:'Units Sold (sum)', val: fmt0(K.totalUnits)},
+    {label:'Stock-out Days', val: `${K.stockOutDays}/${K.withStockDays || '—'}`},
+
+    {label:'Baseline Margin/Unit (৳)', val: fmt(K.baselineMarginTaka,2)},
+    {label:'Baseline Margin %', val: pct(K.baselineMarginPct)},
+    {label:'Suggested Margin/Unit (৳)', val: fmt(K.suggestedMarginTaka,2)},
+    {label:'Suggested Margin %', val: pct(K.suggestedMarginPct)},
+
+    {label:'Revenue Contribution', val: pct(K.contribRevenuePct)},
+    {label:'Margin Contribution', val: pct(K.contribMarginPct)},
+    {label:'Sales Volatility (σ units)', val: fmt(K.stdevUnits,2)},
+    {label:'Inventory Turnover (proxy)', val: K.invTurn==null?'—':fmt(K.invTurn,2)},
+    {label:'Price Elasticity (β)', val: K.elasticity==null?'—':fmt(K.elasticity,3)},
+    {label:'(info) Elasticity only for single product', val: '' }
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpi.map(x=>`
+    <div class="kpi"><div class="label">${x.label}</div><div class="value">${x.val}</div></div>
+  `).join('');
+}
+
+function destroyChart(id){ if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+/* ---------- Trend charts ---------- */
+function renderTrends(rows){
+  const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
+  const units = rows.map(r=> r.NumItemSold_ALL || 0);
+  const price = rows.map(r=> r.AvgSalePrice_ALL || 0);
+
+  destroyChart('trendChart');
+  charts.trendChart = new Chart(document.getElementById('trendChart'), {
+    type:'bar',
+    data:{ labels,
+      datasets:[
+        {label:'Units', data:units, yAxisID:'y', borderWidth:1},
+        {label:'Price (৳)', data:price, type:'line', yAxisID:'y1', borderWidth:2, tension:0.2}
+      ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{ y:{beginAtZero:true, title:{display:true,text:'Units'}},
+               y1:{beginAtZero:false, position:'right', title:{display:true,text:'Price (৳)'}}},
+      plugins:{ legend:{position:'bottom'} }
+    }
+  });
+}
+
+function renderStockVsSales(rows){
+  const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
+  const stock = rows.map(r=> r.TotalMaxCurrentStock || 0);
+  const units = rows.map(r=> r.NumItemSold_ALL || 0);
+
+  destroyChart('stockSalesChart');
+  charts.stockSalesChart = new Chart(document.getElementById('stockSalesChart'), {
+    type:'line',
+    data:{ labels,
+      datasets:[
+        {label:'Stock', data:stock, borderWidth:2, tension:0.2, yAxisID:'y'},
+        {label:'Sales (Units)', data:units, borderWidth:2, tension:0.2, yAxisID:'y1'}
+      ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{ y:{beginAtZero:true, title:{display:true,text:'Stock'}},
+               y1:{beginAtZero:true, position:'right', title:{display:true,text:'Units'}}},
+      plugins:{ legend:{position:'bottom'} }
+    }
+  });
+}
+
+function renderMarginVsPrice(rows){
+  const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
+  const marginPct = rows.map(r=>{
+    const rev=r.AmountOfSold_ALL||0, cost=r.CostAmountOfSold_ALL||0;
+    return rev>0 ? (rev-cost)/rev : null;
+  }).map(x=> x==null? null : x*100);
+  const price = rows.map(r=> r.AvgSalePrice_ALL || 0);
+
+  destroyChart('marginPriceChart');
+  charts.marginPriceChart = new Chart(document.getElementById('marginPriceChart'), {
+    type:'line',
+    data:{ labels,
+      datasets:[
+        {label:'Margin %', data:marginPct, borderWidth:2, tension:0.2, yAxisID:'y'},
+        {label:'Price (৳)', data:price, borderWidth:2, tension:0.2, yAxisID:'y1'}
+      ]},
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{ y:{beginAtZero:true, title:{display:true,text:'Margin %'}},
+               y1:{beginAtZero:false, position:'right', title:{display:true,text:'Price (৳)'}}},
+      plugins:{ legend:{position:'bottom'} }
+    }
+  });
+}
+
+/* ---------- Group contribution: sorted top 10 ---------- */
+function renderGroupContrib(groupRows){
+  const byProd = groupBy(groupRows, 'Product');
+  const prods = Object.keys(byProd).map(p=>{
+    const rows=byProd[p];
+    const rev = rows.reduce((s,r)=> s+(r.AmountOfSold_ALL||0), 0);
+    const mar = rows.reduce((s,r)=> s+((r.AmountOfSold_ALL||0)-(r.CostAmountOfSold_ALL||0)), 0);
+    return {p, rev, mar};
+  });
+
+  const revSum = prods.reduce((s,x)=>s+x.rev,0) || 1e-9;
+  const marSum = prods.reduce((s,x)=>s+x.mar,0) || 1e-9;
+
+  const ranked = prods
+    .map(x=> ({...x, revShare:100*x.rev/revSum, marShare:100*(x.mar/marSum)}))
+    .sort((a,b)=> b.revShare - a.revShare)
+    .slice(0,10);
+
+  destroyChart('contribChart');
+  charts.contribChart = new Chart(document.getElementById('contribChart'), {
+    type:'bar',
+    data:{ labels: ranked.map(x=>x.p),
+      datasets:[
+        {label:'Revenue Share %', data: ranked.map(x=>x.revShare), borderWidth:1},
+        {label:'Margin Share %', data: ranked.map(x=>x.marShare), borderWidth:1}
+      ]},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{position:'bottom'} }, scales:{ x:{beginAtZero:true, max:100} } }
+  });
+}
+
+/* ---------- Cannibalization: bar chart ---------- */
+function renderCannibalizationBars(groupRows, selectedProduct){
+  const title = document.getElementById('cannibalTitle');
+  const hint  = document.getElementById('cannibalHint');
+  const card  = document.getElementById('cannibalCard');
+
+  const byProd = groupBy(groupRows,'Product');
+  const prods = Object.keys(byProd);
+  if (prods.length < 2) { card.style.display='none'; return; }
+  card.style.display='block';
+
+  const dates = uniq(groupRows.map(r=> +new Date(r.Date))).sort((a,b)=>a-b);
+  const vecFor = (prod) => {
+    const map={};
+    (byProd[prod]||[]).forEach(r=>{ map[+new Date(r.Date)]=r.NumItemSold_ALL||0; });
+    return dates.map(ts=> map[ts] || 0);
+  };
+
+  let labels = [], values = [];
+
+  if (selectedProduct==='__ALL__') {
+    // Show top 10 most negative correlated pairs across all products
+    title.textContent = 'Cannibalization — Top 10 Most Negative Pairs';
+    hint.textContent  = 'Pairs with lowest ρ across products (units vs units).';
+    const pairs = [];
+    for (let i=0;i<prods.length;i++){
+      for (let j=i+1;j<prods.length;j++){
+        const rho = correlation(vecFor(prods[i]), vecFor(prods[j]));
+        pairs.push({label: prods[i]+' vs '+prods[j], rho});
+      }
+    }
+    pairs.sort((a,b)=> a.rho - b.rho);
+    const top = pairs.slice(0, Math.min(10, pairs.length));
+    labels = top.map(x=>x.label);
+    values = top.map(x=>x.rho);
+  } else {
+    // Correlation vs selected product
+    title.textContent = 'Cannibalization vs Selected (Top 10 correlations)';
+    hint.textContent  = 'More negative ρ ⇒ stronger cannibalization signal.';
+    const targetVec = vecFor(selectedProduct);
+    const peers = prods.filter(p=> p!==selectedProduct);
+    const rows = peers.map(p=> ({p, rho: correlation(targetVec, vecFor(p))}));
+    const ranked = rows.sort((a,b)=> a.rho - b.rho).slice(0,10);
+    labels = ranked.map(x=>x.p);
+    values = ranked.map(x=>x.rho);
+  }
+
+  destroyChart('cannibalBars');
+  charts.cannibalBars = new Chart(document.getElementById('cannibalBars'), {
+    type:'bar',
+    data:{ labels, datasets:[{label:'Correlation (ρ)', data: values, borderWidth:1}] },
+    options:{
+      indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{ x:{ min:-1, max:1, title:{display:true, text:'Correlation (ρ)'} } },
+      plugins:{ legend:{display:false} }
+    }
+  });
+}
+
+/* ---------- Extra charts ---------- */
+function renderExtras(rows){
+  // Scatter: price vs units + trendline
+  const points = rows.filter(r=> (r.AvgSalePrice_ALL>0 && r.NumItemSold_ALL>0))
+                     .map(r=> ({x:r.AvgSalePrice_ALL, y:r.NumItemSold_ALL}));
+  let a=0,b=0;
+  if(points.length>=2){
+    const n=points.length;
+    const mx=points.reduce((s,p)=>s+p.x,0)/n, my=points.reduce((s,p)=>s+p.y,0)/n;
+    let num=0,den=0; points.forEach(p=>{ num+=(p.x-mx)*(p.y-my); den+=(p.x-mx)*(p.x-mx); });
+    b = den? num/den : 0; a = my - b*mx;
+  }
+  const minX = points.length? Math.min(...points.map(p=>p.x)) : 0;
+  const maxX = points.length? Math.max(...points.map(p=>p.x)) : 1;
+  const trend = (points.length>=2)? [{x:minX, y:a+b*minX}, {x:maxX, y:a+b*maxX}] : [];
+
+  destroyChart('scatterChart');
+  charts.scatterChart = new Chart(document.getElementById('scatterChart'), {
+    type:'scatter',
+    data:{ datasets:[
+      {label:'Observations', data:points, borderWidth:1, pointRadius:3},
+      ...(trend.length? [{label:'Trendline', data:trend, type:'line', borderWidth:2, tension:0}] : [])
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{position:'bottom'} },
+      scales:{ x:{ title:{display:true, text:'AvgSalePrice (৳)'} },
+               y:{ title:{display:true, text:'Units'} , beginAtZero:true } }
+    }
+  });
+
+  // Rolling revenue (7-day)
+  const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
+  const revenue = rows.map(r=> r.AmountOfSold_ALL||0);
+  const rolling = [];
+  let sum=0;
+  for(let i=0;i<revenue.length;i++){ sum+=revenue[i]; if(i>=6) sum-=revenue[i-6]; rolling.push(i>=6? sum/7 : sum/(i+1)); }
+  destroyChart('rollingRevChart');
+  charts.rollingRevChart = new Chart(document.getElementById('rollingRevChart'), {
+    type:'line',
+    data:{ labels, datasets:[{label:'Rolling 7-day Avg Revenue (৳)', data:rolling, borderWidth:2, tension:0.2}]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{position:'bottom'} },
+      scales:{ y:{ beginAtZero:true, title:{display:true, text:'৳'} } }
+    }
+  });
+
+  // Margin histogram
+  const margins = rows.map(r=>{
+    const rev=r.AmountOfSold_ALL||0, cost=r.CostAmountOfSold_ALL||0;
+    return rev>0 ? (rev-cost)/rev : null;
+  }).filter(x=>x!=null);
+  const bins = [0,0.05,0.10,0.15,0.20,0.25,0.30,0.40,0.50,0.60];
+  const counts = new Array(bins.length-1).fill(0);
+  margins.forEach(m=>{
+    for(let i=0;i<bins.length-1;i++){ if(m>=bins[i] && m<bins[i+1]){ counts[i]++; break; } }
+  });
+  destroyChart('marginHistChart');
+  charts.marginHistChart = new Chart(document.getElementById('marginHistChart'), {
+    type:'bar',
+    data:{ labels: bins.slice(0,-1).map((b,i)=> `${Math.round(b*100)}–${Math.round(bins[i+1]*100)}%`),
+           datasets:[{label:'Days in Bin', data:counts, borderWidth:1}] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{display:false} },
+      scales:{ y:{ beginAtZero:true, title:{display:true, text:'Days'} } }
+    }
+  });
+}
+
+/* ---------- Details table ---------- */
+function renderDetailsTable(rows){
+  const cols=['Date','NumItemSold_ALL','AvgSalePrice_ALL','AvgCostPrice_ALL','Margin_All','TotalMaxCurrentStock','AvgAdminCostPrice','AvgCachedListPrice','AmountOfSold_ALL','CostAmountOfSold_ALL'];
+  const thead=document.querySelector('#detailTable thead');
+  const tbody=document.querySelector('#detailTable tbody');
+  thead.innerHTML = `<tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>`;
+  tbody.innerHTML = rows.slice().sort((a,b)=>a.Date-b.Date).map(r=>`
+    <tr>
+      <td>${dayjs(r.Date).format('YYYY-MM-DD')}</td>
+      <td>${fmt0(r.NumItemSold_ALL)}</td>
+      <td>${fmt(r.AvgSalePrice_ALL,2)}</td>
+      <td>${fmt(r.AvgCostPrice_ALL,2)}</td>
+      <td>${pct(r.Margin_All)}</td>
+      <td>${fmt0(r.TotalMaxCurrentStock)}</td>
+      <td>${fmt(r.AvgAdminCostPrice,2)}</td>
+      <td>${fmt(r.AvgCachedListPrice,2)}</td>
+      <td>${fmt(r.AmountOfSold_ALL,2)}</td>
+      <td>${fmt(r.CostAmountOfSold_ALL,2)}</td>
+    </tr>`).join('');
+}
+</script>
+
+</body>
+</html>
