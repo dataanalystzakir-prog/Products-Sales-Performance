@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Products Performance Analysis</title>
+<title>Products Performance Analysis — v3.6</title>
 
 <!-- Libraries (CDN) -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" />
@@ -15,253 +15,354 @@
 
 <!-- Styling -->
 <style>
-  :root { --brand-yellow:#ffd670; --brand-purple:#45377f; }
-  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin:24px; background:#0f1115; color:#e9ecf1; }
-  h1,h2,h3{ margin:6px 0 10px; }
-  h1{ font-size:24px; color:var(--brand-yellow); }
-  h2{ font-size:18px; color:#fff; border-left:6px solid var(--brand-purple); padding-left:10px; }
-  .row{ display:grid; grid-template-columns:repeat(12,1fr); gap:16px; margin-bottom:16px; }
-  .card{ grid-column:span 12; background:#171a21; border:1px solid #232a34; border-radius:14px; padding:16px; box-shadow:0 4px 16px rgba(0,0,0,.25); }
-  .card.accent{ border-color:var(--brand-purple); }
-  .controls{ display:grid; grid-template-columns:repeat(12,1fr); gap:12px; }
-  .control{ grid-column:span 12; display:flex; flex-direction:column; gap:8px; }
-  .control.third{ grid-column:span 4; }
-  .control.half{ grid-column:span 6; }
-  input[type="file"],select,input[type="number"],input[type="text"]{
-    background:#0c0f14; border:1px solid #2a3240; border-radius:10px; padding:10px; color:#e9ecf1;
+  :root{
+    --brand-yellow:#ffd670; --brand-yellow-2:#f5c140;
+    --brand-purple:#6e59cf;
+    --bg:#0f1115; --card:#171a21; --ink:#e9ecf1; --ink-dim:#9fb0c9; --stroke:#232a34;
+    --input-bg:#0c0f14; --input-border:#2a3240;
   }
-  .btn{ background:linear-gradient(135deg,var(--brand-yellow),#f5c140); color:#111; font-weight:700; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; }
-  .btn.secondary{ background:#0c0f14; color:#e9ecf1; border:1px solid #2a3240; }
+  :root[data-theme="light"]{
+    --bg:#f7f9fc; --card:#ffffff; --ink:#0e1320; --ink-dim:#6b7280; --stroke:#e5e7eb;
+    --input-bg:#ffffff; --input-border:#d1d5db;
+  }
+
+  *{ box-sizing:border-box; }
+  html[data-theme="light"] body{ color-scheme: light; }
+  html[data-theme="dark"] body{ color-scheme: dark; }
+
+  body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; margin:24px; background:var(--bg); color:var(--ink); }
+  h1{ font-size:24px; color:var(--brand-yellow); margin:0 0 14px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  h2{ font-size:18px; color:inherit; margin:0 0 10px; display:flex; align-items:center; gap:8px; }
+  h2::before{ content:""; width:6px; height:18px; border-radius:4px; background:var(--brand-purple); display:inline-block; }
+  h3{ font-size:15px; margin:0 0 8px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(12,1fr); gap:16px; }
+  .card{ grid-column:span 12; background:var(--card); border:1px solid var(--stroke); border-radius:14px; padding:14px; box-shadow:0 4px 16px rgba(0,0,0,.12); }
+  .row-inline{ display:flex; gap:12px; align-items:end; flex-wrap:wrap; }
+  .grow{ flex:1 1 260px; min-width:220px; }
+  .tight{ width:180px; }
+  .spacer{ flex:1 1 auto; }
+
+  select, input[type="number"], input[type="text"], input[type="date"]{
+    background:var(--input-bg); border:1px solid var(--input-border); border-radius:10px; padding:10px; color:var(--ink);
+    outline:none;
+  }
+  select:focus, input:focus{ box-shadow:0 0 0 2px rgba(255,214,112,.25); border-color:var(--brand-yellow); }
+
+  /* Calendar: hide native indicator & add custom white icon */
+  input[type="date"]{
+    padding-right:36px; /* room for icon */
+    position:relative;
+    background-image: url('data:image/svg+xml;utf8,\
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%23ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />\
+      <line x1="16" y1="2" x2="16" y2="6"/>\
+      <line x1="8" y1="2" x2="8" y2="6"/>\
+      <line x1="3" y1="10" x2="21" y2="10"/>\
+      </svg>');
+    background-repeat:no-repeat;
+    background-position: right 10px center;
+    background-size:18px 18px;
+  }
+  :root[data-theme="light"] input[type="date"]{
+    background-image: url('data:image/svg+xml;utf8,\
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%230e1320" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">\
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />\
+      <line x1="16" y1="2" x2="16" y2="6"/>\
+      <line x1="8" y1="2" x2="8" y2="6"/>\
+      <line x1="3" y1="10" x2="21" y2="10"/>\
+      </svg>');
+  }
+  /* Hide the default calendar indicator but keep the native picker functional */
+  input[type="date"]::-webkit-calendar-picker-indicator{ opacity:0; width:28px; height:28px; cursor:pointer; }
+
+  /* Adjacent external button to open picker explicitly */
+  .date-btn{
+    background:var(--input-bg); border:1px solid var(--input-border); border-radius:10px; padding:10px;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .date-btn svg{ width:18px; height:18px; stroke:#ffffff; }
+  :root[data-theme="light"] .date-btn svg{ stroke:#0e1320; }
+  .date-wrap{ display:flex; gap:8px; align-items:center; }
+
+  .btn{ background:linear-gradient(135deg,var(--brand-yellow),var(--brand-yellow-2)); color:#111; font-weight:700; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; }
+  .btn.secondary{ background:var(--input-bg); color:var(--ink); border:1px solid var(--input-border); }
   .btn:disabled{ filter:grayscale(.5); cursor:not-allowed; }
+
+  .hint{ color:var(--ink-dim); font-size:12px; }
+  .pill{ display:inline-block; padding:4px 10px; border-radius:999px; background:var(--input-bg); border:1px solid var(--input-border); color:var(--ink-dim); font-size:12px; margin-right:6px; }
   .kpi-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
-  .kpi{ background:#0c0f14; border:1px solid #232a34; border-radius:12px; padding:10px; }
-  .kpi .label{ color:#9fb0c9; font-size:12px; }
-  .kpi .value{ font-size:18px; font-weight:700; color:#fff; margin-top:6px; }
-  .hint{ color:#9fb0c9; font-size:12px; }
-  .pill{ display:inline-block; padding:4px 10px; border-radius:999px; background:#0c0f14; border:1px solid #232a34; color:#9fb0c9; font-size:12px; margin-right:6px; }
-  canvas{ background:#0c0f14; border-radius:12px; }
+  .kpi{ background:var(--input-bg); border:1px solid var(--input-border); border-radius:12px; padding:10px; }
+  .kpi .label{ color:var(--ink-dim); font-size:12px; }
+  .kpi .value{ font-size:18px; font-weight:700; color:inherit; margin-top:6px; }
 
-  /* Fixed-height charts */
-  .chart-fixed{ height:320px !important; max-height:320px !important; }
-
-  .table-wrap{ overflow:auto; max-height:380px; border:1px solid #232a34; border-radius:12px; }
+  .table-wrap{ overflow:auto; max-height:380px; border:1px solid var(--stroke); border-radius:12px; }
   table{ width:100%; border-collapse:collapse; }
-  th,td{ padding:8px 10px; border-bottom:1px solid #232a34; font-size:13px; }
-  th{ position:sticky; top:0; background:#0f1217; }
+  th,td{ padding:8px 10px; border-bottom:1px solid var(--stroke); font-size:13px; }
+  th{ position:sticky; top:0; background:var(--bg); }
+  canvas{ background:var(--input-bg); border-radius:12px; }
+  .chart-fixed{ height:320px !important; max-height:320px !important; }
+  footer{ margin-top:26px; text-align:center; color:var(--ink-dim); font-size:12px; }
 
-  /* Latest prices panel */
-  .latest-wrap{ display:grid; grid-template-columns:repeat(12,1fr); gap:12px; }
-  .latest-box{ grid-column:span 12; background:#0c0f14; border:1px solid #2a3240; border-radius:12px; padding:12px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; }
-  .latest-item{ margin:6px 10px; }
-  .latest-label{ color:#9fb0c9; font-size:12px; }
-  .latest-value{ font-weight:800; font-size:18px; color:#fff; }
-  .latest-date{ color:#9fb0c9; font-size:12px; }
+  /* Pretty upload (from v3.3) */
+  .upload-wrap{ position:relative; background:var(--input-bg); border:1px dashed var(--input-border); border-radius:12px; padding:10px 12px; display:flex; align-items:center; gap:10px; }
+  .upload-wrap:hover{ border-color:#55607a44; }
+  .upload-input{ display:none; }
+  .upload-btn{ background:#131722; border:1px solid #2a3240; color:#e9ecf1; padding:8px 12px; border-radius:10px; cursor:pointer; }
+  :root[data-theme="light"] .upload-btn{ background:#ffffff; border:1px solid var(--input-border); color:#0e1320; }
+  .upload-name{ color:var(--ink-dim); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:320px; }
 
-  footer{ margin-top:26px; text-align:center; color:#9fb0c9; font-size:12px; }
+  /* Info band */
+  .infoband{ margin-top:12px; border:1px solid var(--input-border); background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02)), var(--card); border-radius:12px; padding:12px 14px; display:flex; align-items:center; gap:18px; }
+  .infoblock{ flex:1 1 0; min-width:140px; }
+  .infotitle{ color:var(--ink-dim); font-size:12px; }
+  .infovalue{ color:inherit; font-weight:800; font-size:18px; }
+  .infocaption{ color:var(--ink-dim); font-size:12px; margin-top:2px; }
+
+  /* Theme switcher */
+  .theme-toggle{ display:flex; align-items:center; gap:8px; }
+  .theme-toggle button{ background:var(--input-bg); color:inherit; border:1px solid var(--input-border); border-radius:999px; padding:6px 10px; cursor:pointer; }
 </style>
 </head>
 <body>
 
-<h1>Products Performance Analysis</h1>
+<h1>
+  Products Performance Analysis — v3.6
+  <span class="theme-toggle">
+    <span class="hint">Theme</span>
+    <button id="themeBtn" title="Switch theme">Dark</button>
+  </span>
+</h1>
 
-<!-- Controls -->
-<div class="row">
-  <div class="card">
-    <div class="controls">
-      <div class="control third">
-        <label><strong>Upload Excel (.xlsx)</strong></label>
-        <input type="file" id="fileInput" accept=".xlsx,.xls" />
-        <div class="hint">Headers needed: <small>Date, Product, NumItemSold_ALL, AvgSalePrice_ALL, AvgCostPrice_ALL, Margin_All, TotalMaxCurrentStock, AvgAdminCostPrice, AvgCachedListPrice</small></div>
-      </div>
-      <div class="control third">
-        <label><strong>Pick Product</strong></label>
-        <select id="productSelect" disabled>
-          <option value="__ALL__">All products</option>
-        </select>
-      </div>
-      <div class="control third">
-        <label><strong>Suggested AvgCachedListPrice (৳)</strong></label>
-        <input type="number" id="suggestedPrice" step="0.01" placeholder="Enter new price…" disabled />
-      </div>
-
-      <div class="control third">
-        <label><strong>Date Range (Optional)</strong></label>
-        <input type="text" id="dateFilter" placeholder="e.g., 2025-01-01 to 2025-09-30" />
-        <div class="hint">Leave blank to use full range. Format: <small>YYYY-MM-DD to YYYY-MM-DD</small></div>
-      </div>
-      <div class="control third">
-        <label><strong>Baseline Window (days) for 30-day forecast</strong></label>
-        <input type="number" id="baselineDays" value="14" min="7" max="90" />
-      </div>
-      <div class="control third" style="display:flex; gap:8px; align-items:end;">
-        <button class="btn" id="runBtn" disabled>Recalculate & Visualize</button>
-        <button class="btn secondary" id="clearBtn" disabled>Clear Filters</button>
+<div class="card">
+  <!-- Row 1: Upload + Product + Suggested -->
+  <div class="row-inline" style="align-items:center">
+    <div class="grow">
+      <label><strong>Upload Excel (.xlsx)</strong></label>
+      <div class="upload-wrap" id="dropZone">
+        <button class="upload-btn" id="uploadBtn">Choose File</button>
+        <span class="upload-name" id="uploadName">Drop file here or click “Choose File”</span>
+        <input class="upload-input" type="file" id="fileInput" accept=".xlsx,.xls" />
       </div>
     </div>
 
-    <!-- Latest Prices -->
-    <div class="latest-wrap" style="margin-top:10px;">
-      <div class="latest-box">
-        <div class="latest-item">
-          <div class="latest-label">Latest for</div>
-          <div class="latest-value" id="latestProduct">—</div>
-          <div class="latest-date" id="latestDate">—</div>
-        </div>
-        <div class="latest-item">
-          <div class="latest-label">Latest AvgAdminCostPrice (৳)</div>
-          <div class="latest-value" id="latestAdmin">—</div>
-        </div>
-        <div class="latest-item">
-          <div class="latest-label">Latest AvgCachedListPrice (৳)</div>
-          <div class="latest-value" id="latestCached">—</div>
-        </div>
-        <div class="latest-item">
-          <div class="latest-label">Baseline Margin/Unit</div>
-          <div class="latest-value" id="latestBaselineMargin">—</div>
-        </div>
-        <div class="latest-item">
-          <div class="latest-label">Suggested Margin/Unit</div>
-          <div class="latest-value" id="latestSuggestedMargin">—</div>
-        </div>
+    <div class="grow">
+      <label><strong>Pick Product</strong></label>
+      <select id="productSelect" disabled class="grow">
+        <option value="__ALL__">All products</option>
+      </select>
+    </div>
+
+    <div class="grow">
+      <label><strong>Suggested AvgCachedListPrice (৳)</strong></label>
+      <input class="tight" type="number" id="suggestedPrice" step="0.01" placeholder="Enter new price…" disabled />
+      <span class="hint">Auto-fills with latest when empty.</span>
+    </div>
+  </div>
+
+  <!-- Row 2: Date range + Baseline + buttons -->
+  <div class="row-inline" style="margin-top:10px">
+    <div>
+      <label><strong>Date Range</strong></label><br/>
+      <div class="date-wrap">
+        <input class="tight" type="date" id="fromDate" />
+        <button class="date-btn" data-target="fromDate" title="Open calendar">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </button>
+        <input class="tight" type="date" id="toDate" />
+        <button class="date-btn" data-target="toDate" title="Open calendar">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </button>
       </div>
     </div>
-    <!-- /Latest Prices -->
 
+    <div class="grow">
+      <label><strong>Baseline Window (days) for 30-day forecast</strong></label><br/>
+      <input class="tight" type="number" id="baselineDays" value="14" min="7" max="90" />
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="row-inline">
+      <button class="btn" id="runBtn" disabled>Recalculate & Visualize</button>
+      <button class="btn secondary" id="clearBtn" disabled>Clear Filters</button>
+      <button class="btn secondary" id="clearDates" disabled>Clear Dates</button>
+    </div>
+  </div>
+
+  <!-- Info band -->
+  <div class="infoband" id="latestBand" style="display:none;">
+    <div class="infoblock">
+      <div class="infotitle">Latest for</div>
+      <div class="infovalue" id="lbName">—</div>
+      <div class="infocaption">Latest date: <span id="lbDate">—</span></div>
+    </div>
+    <div class="infoblock">
+      <div class="infotitle">Latest AvgAdminCostPrice (৳)</div>
+      <div class="infovalue" id="lbAdmin">—</div>
+    </div>
+    <div class="infoblock">
+      <div class="infotitle">Latest AvgCachedListPrice (৳)</div>
+      <div class="infovalue" id="lbCached">—</div>
+    </div>
+    <div class="infoblock">
+      <div class="infotitle">Baseline Margin/Unit</div>
+      <div class="infovalue" id="lbBaseMargin">—</div>
+    </div>
+    <div class="infoblock">
+      <div class="infotitle">Suggested Margin/Unit</div>
+      <div class="infovalue" id="lbSuggMargin">—</div>
+    </div>
   </div>
 </div>
 
 <!-- KPIs -->
-<div class="row">
-  <div class="card accent">
-    <h2>Key Metrics (16)</h2>
-    <div class="kpi-grid" id="kpiGrid"></div>
-    <div class="hint" style="margin-top:8px">
-      <span class="pill">Baseline Margin = Last date's <strong>AvgAdminCostPrice</strong> vs last date's <strong>AvgCachedListPrice</strong></span>
-      <span class="pill">Suggested Margin = Last date's <strong>AvgAdminCostPrice</strong> vs your <strong>Suggested AvgCachedListPrice</strong></span>
+<div class="card">
+  <h2>Key Metrics</h2>
+  <div class="kpi-grid" id="kpiGrid"></div>
+  <div class="hint" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px;">
+    <span class="pill">Gross Margin % = (ΣRevenue − ΣCost) / ΣRevenue</span>
+    <span class="pill">Suggested Margin % = (Suggested − Last Admin) / Suggested</span>
+    <span class="pill">Sales Volatility (σ units) = stdev of daily NumItemSold_ALL</span>
+    <span class="pill">Inventory Turnover (proxy) = ΣUnits ÷ Avg(TotalMaxCurrentStock by day)</span>
+    <span class="pill">Price Elasticity (β) = slope of ln(Units) vs ln(Price)</span>
+  </div>
+</div>
+
+<!-- Trends & Market % -->
+<div class="card">
+  <h2>Selected Product — Trends</h2>
+  <div class="grid">
+    <div class="card" style="grid-column: span 4;">
+      <h3>Daily Units & Price</h3>
+      <canvas id="trendChart" class="chart-fixed"></canvas>
+    </div>
+    <div class="card" style="grid-column: span 4;">
+      <h3>Daily Stock vs Sales</h3>
+      <canvas id="stockSalesChart" class="chart-fixed"></canvas>
+    </div>
+    <div class="card" style="grid-column: span 4;">
+      <h3>Daily Margin% & Cost Price</h3>
+      <canvas id="marginCostChart" class="chart-fixed"></canvas>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:12px;">
+    <div class="card" style="grid-column: span 12;">
+      <h3>Market Percentage (1 − NumItemSold_Invent / NumItemSold_ALL) × 100</h3>
+      <canvas id="marketShareChart" class="chart-fixed"></canvas>
     </div>
   </div>
 </div>
 
-<!-- Trend & comparison charts -->
-<div class="row">
-  <div class="card">
-    <h2>Selected Product — Trends (or Group Aggregate if “All products”)</h2>
-    <div class="row">
-      <div class="card" style="grid-column: span 4;">
-        <h3>Daily Units & Price</h3>
-        <canvas id="trendChart" class="chart-fixed"></canvas>
-      </div>
-      <div class="card" style="grid-column: span 4;">
-        <h3>Daily Stock vs Sales</h3>
-        <canvas id="stockSalesChart" class="chart-fixed"></canvas>
-      </div>
-      <div class="card" style="grid-column: span 4;">
-        <h3>Daily Margin% & Price</h3>
-        <canvas id="marginPriceChart" class="chart-fixed"></canvas>
-      </div>
+<!-- Group comparisons -->
+<div class="card">
+  <h2>Group Comparisons</h2>
+  <div class="grid">
+    <div class="card" style="grid-column: span 6;">
+      <h3>Sales & Margin Contribution — Top 10</h3>
+      <canvas id="contribChart" class="chart-fixed"></canvas>
     </div>
-  </div>
-</div>
-
-<div class="row">
-  <div class="card">
-    <h2>Group Comparisons</h2>
-    <div class="row">
-      <div class="card" style="grid-column: span 6;">
-        <h3>Sales & Margin Contribution — Top 10</h3>
-        <canvas id="contribChart" class="chart-fixed"></canvas>
-      </div>
-      <div class="card" style="grid-column: span 6;" id="cannibalCard">
-        <h3 id="cannibalTitle">Cannibalization vs Selected (Top 10 correlations)</h3>
-        <canvas id="cannibalBars" class="chart-fixed"></canvas>
-        <div class="hint" id="cannibalHint">More negative ρ ⇒ stronger cannibalization signal.</div>
-      </div>
+    <div class="card" style="grid-column: span 6;" id="cannibalCard">
+      <h3 id="cannibalTitle">Cannibalization vs Selected (Top 10 correlations)</h3>
+      <canvas id="cannibalBars" class="chart-fixed"></canvas>
+      <div class="hint" id="cannibalHint">More negative ρ ⇒ stronger cannibalization signal (units vs units by date).</div>
     </div>
   </div>
 </div>
 
 <!-- Deeper Insights -->
-<div class="row">
-  <div class="card">
-    <h2>Deeper Insights</h2>
-    <div class="row">
-      <div class="card" style="grid-column: span 4;">
-        <h3>Price vs Units (Scatter)</h3>
-        <canvas id="scatterChart" class="chart-fixed"></canvas>
-      </div>
-      <div class="card" style="grid-column: span 4;">
-        <h3>Rolling 7-day Revenue Trend</h3>
-        <canvas id="rollingRevChart" class="chart-fixed"></canvas>
-      </div>
-      <div class="card" style="grid-column: span 4;">
-        <h3>Margin % Distribution</h3>
-        <canvas id="marginHistChart" class="chart-fixed"></canvas>
-      </div>
+<div class="card">
+  <h2>Deeper Insights</h2>
+  <div class="grid">
+    <div class="card" style="grid-column: span 6;">
+      <h3>Price vs Units (Scatter) — Selected</h3>
+      <canvas id="scatterChart" class="chart-fixed"></canvas>
+    </div>
+    <div class="card" style="grid-column: span 6;">
+      <h3>Price vs Units (Scatter) — All Products (colored by product)</h3>
+      <canvas id="scatterAllChart" class="chart-fixed"></canvas>
+    </div>
+    <div class="card" style="grid-column: span 6;">
+      <h3>Latest Cached Price by Product</h3>
+      <canvas id="latestCachedChart" class="chart-fixed"></canvas>
+    </div>
+    <div class="card" style="grid-column: span 6;">
+      <h3>Latest Admin Cost by Product</h3>
+      <canvas id="latestAdminChart" class="chart-fixed"></canvas>
+    </div>
+    <div class="card" style="grid-column: span 6;">
+      <h3>Latest Margin % by Product</h3>
+      <canvas id="latestMarginChart" class="chart-fixed"></canvas>
     </div>
   </div>
 </div>
 
 <!-- Details -->
-<div class="row">
-  <div class="card">
-    <h2>Details — Current Selection</h2>
-    <div class="table-wrap"><table id="detailTable"><thead></thead><tbody></tbody></table></div>
-    <div class="hint">“All products” rows are daily aggregates with weighted averages.</div>
-  </div>
+<div class="card">
+  <h2>Details — Current Selection</h2>
+  <div class="table-wrap"><table id="detailTable"><thead></thead><tbody></tbody></table></div>
+  <div class="hint">“All products” rows are daily aggregates with weighted averages.</div>
 </div>
 
-<footer>© Analyst_Zakir | Email: zakir.hossain@chaldal.com</footer>
-<footer> </footer>
+<footer>© Analyst_Zakir | Email: dataanalystzakir@gmail.com</footer>
 
 <script>
-/* ---------------- Chart.js defaults ---------------- */
-Chart.defaults.responsive = true;
-Chart.defaults.maintainAspectRatio = false;   // CSS controls height
-Chart.defaults.resizeDelay = 200;             // throttle
+// Theme
+(function(){
+  const html = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  const saved = localStorage.getItem('ppa_theme');
+  if(saved){ html.setAttribute('data-theme', saved); btn.textContent = saved==='dark'?'Dark':'Light'; }
+  btn.addEventListener('click', ()=>{
+    const cur = html.getAttribute('data-theme') || 'dark';
+    const next = cur==='dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('ppa_theme', next);
+    btn.textContent = next==='dark'?'Dark':'Light';
+  });
+})();
 
-/* ---------------- Helpers ---------------- */
+Chart.defaults.responsive = true;
+Chart.defaults.maintainAspectRatio = false;
+Chart.defaults.resizeDelay = 200;
+
 const isNullLike = (v) => v===null || v===undefined || (typeof v==='string' && v.trim().toUpperCase()==='NULL') || (typeof v==='string' && v.trim()==='');
 const fmt = (n, d=2) => (n==null || isNaN(n)) ? '—' : Number(n).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmt0 = (n) => (n==null || isNaN(n)) ? '—' : Number(n).toLocaleString();
 const pct = (n) => (n==null || isNaN(n)) ? '—' : (n*100).toFixed(2) + '%';
-const parseNum = (v) => {
-  if (isNullLike(v)) return null;
-  if (typeof v === 'number') return v;
-  const s = String(v).replace(/,/g,'').trim();
-  if (s.toUpperCase()==='NULL' || s==='') return null;
-  const n = Number(s);
-  return isNaN(n) ? null : n;
-};
-
-// Excel serial → Date
-const excelSerialToDate = (v) => {
-  const ms = (v - 25569) * 86400 * 1000;
-  return new Date(ms);
-};
-
-const parseDate = (v) => {
-  if (isNullLike(v)) return null;
-  if (v instanceof Date) return v;
-  if (typeof v === 'number') return excelSerialToDate(v);     // Excel serial
-  // Explicit MM/DD/YYYY support
-  let d = dayjs(String(v).trim(), ['M/D/YYYY','MM/DD/YYYY','YYYY-MM-DD','M/D/YY','MM/DD/YY'], true);
-  if (!d.isValid()) d = dayjs(String(v).trim());
-  return d.isValid() ? d.toDate() : null;
-};
-
+const parseNum = (v) => { if (isNullLike(v)) return null; if (typeof v === 'number') return v; const s = String(v).replace(/,/g,'').trim(); if (s.toUpperCase()==='NULL' || s==='') return null; const n = Number(s); return isNaN(n) ? null : n; };
+const excelSerialToDate = (v) => { const ms = (v - 25569) * 86400 * 1000; return new Date(ms); };
+const parseDate = (v) => { if (isNullLike(v)) return null; if (v instanceof Date) return v; if (typeof v === 'number') return excelSerialToDate(v); let d = dayjs(String(v).trim(), ['M/D/YYYY','MM/DD/YYYY','YYYY-MM-DD','M/D/YY','MM/DD/YY'], true); if (!d.isValid()) d = dayjs(String(v).trim()); return d.isValid() ? d.toDate() : null; };
 const groupBy = (arr, key) => arr.reduce((acc,x)=>{ (acc[x[key]] = acc[x[key]] || []).push(x); return acc; }, {});
 const uniq = (arr) => [...new Set(arr)];
 const average = (a) => { const b=a.filter(x=>x!=null && !isNaN(x)); return b.length? b.reduce((s,x)=>s+x,0)/b.length : null; };
 
-/* ---------------- Global State ---------------- */
 let rawRows = [];
-let products = [];
 let charts = {};
-let groupAgg = [];
 
-/* ---------------- Load Excel ---------------- */
-document.getElementById('fileInput').addEventListener('change', async (e) => {
-  const file = e.target.files[0]; if (!file) return;
+/* Pretty upload: click & drop */
+const fileInput   = document.getElementById('fileInput');
+const uploadBtn   = document.getElementById('uploadBtn');
+const uploadName  = document.getElementById('uploadName');
+const dropZone    = document.getElementById('dropZone');
+
+uploadBtn.addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', ()=> {
+  if (fileInput.files && fileInput.files[0]) uploadName.textContent = fileInput.files[0].name;
+  handleFile(fileInput.files[0]);
+});
+['dragenter','dragover'].forEach(evt=> dropZone.addEventListener(evt, e=>{ e.preventDefault(); dropZone.style.borderColor = '#6e7aa0'; }));
+['dragleave','drop'].forEach(evt=> dropZone.addEventListener(evt, e=>{ e.preventDefault(); dropZone.style.borderColor = '#394255'; }));
+dropZone.addEventListener('drop', e=> {
+  const file = e.dataTransfer.files[0]; if (!file) return;
+  fileInput.files = e.dataTransfer.files;
+  uploadName.textContent = file.name;
+  handleFile(file);
+});
+
+async function handleFile(file){
+  if (!file) return;
   const data = await file.arrayBuffer();
   const wb = XLSX.read(data, {type:'array', cellDates:true});
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -280,10 +381,6 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
     AvgCostPrice_ALL: parseNum(r.AvgCostPrice_ALL),
     Margin_All: parseNum(r.Margin_All),
     NumItemSold_Invent: parseNum(r.NumItemSold_Invent),
-    AmountOfSold_Invent: parseNum(r.AmountOfSold_Invent),
-    SaleAmountOfSold_Invent: parseNum(r.SaleAmountOfSold_Invent),
-    CostAmountOfSold_Invent: parseNum(r.CostAmountOfSold_Invent),
-    AvgSalePrice_Invent: parseNum(r.AvgSalePrice_Invent),
     AvgCostPrice_Invent: parseNum(r.AvgCostPrice_Invent),
     Margin_Invent: parseNum(r.Margin_Invent),
     TotalMaxCurrentStock: parseNum(r.TotalMaxCurrentStock),
@@ -291,72 +388,76 @@ document.getElementById('fileInput').addEventListener('change', async (e) => {
     AvgCachedListPrice: parseNum(r.AvgCachedListPrice)
   })).filter(r => r.Date && r.Product);
 
-  products = uniq(rawRows.map(r => r.Product)).sort((a,b)=>a.localeCompare(b));
+  const products = uniq(rawRows.map(r => r.Product)).sort((a,b)=>a.localeCompare(b));
   const sel = document.getElementById('productSelect');
   sel.innerHTML = `<option value="__ALL__">All products</option>` + products.map(p => `<option>${p}</option>`).join('');
   sel.disabled = false;
   document.getElementById('suggestedPrice').disabled = false;
   document.getElementById('runBtn').disabled = false;
   document.getElementById('clearBtn').disabled = false;
-
-  buildGroupAgg();
+  document.getElementById('clearDates').disabled = false;
+  document.getElementById('latestBand').style.display = 'flex';
   recalcAndRender();
+}
+
+// external date buttons open native pickers
+document.addEventListener('click', (e)=>{
+  const t = e.target.closest('.date-btn'); if(!t) return;
+  const id = t.getAttribute('data-target');
+  const input = document.getElementById(id);
+  if (input && input.showPicker) { input.showPicker(); } else { input.focus(); }
 });
 
 document.getElementById('runBtn').addEventListener('click', recalcAndRender);
 document.getElementById('productSelect').addEventListener('change', recalcAndRender);
 document.getElementById('suggestedPrice').addEventListener('input', recalcAndRender);
-document.getElementById('dateFilter').addEventListener('change', recalcAndRender);
+document.getElementById('fromDate').addEventListener('change', recalcAndRender);
+document.getElementById('toDate').addEventListener('change', recalcAndRender);
+document.getElementById('clearDates').addEventListener('click', () => { document.getElementById('fromDate').value = ''; document.getElementById('toDate').value = ''; recalcAndRender(); });
 document.getElementById('clearBtn').addEventListener('click', () => {
   document.getElementById('productSelect').value = '__ALL__';
-  document.getElementById('dateFilter').value = '';
+  document.getElementById('fromDate').value = '';
+  document.getElementById('toDate').value = '';
   document.getElementById('suggestedPrice').value = '';
   recalcAndRender();
 });
 
-/* ---------------- Core calcs ---------------- */
 function filterByDateRange(rows) {
-  const txt = (document.getElementById('dateFilter').value || '').trim();
-  if (!txt) return rows;
-  const m = txt.match(/^\s*(\d{4}-\d{2}-\d{2})\s+to\s+(\d{4}-\d{2}-\d{2})\s*$/i);
-  if (!m) return rows;
-  const start = dayjs(m[1],'YYYY-MM-DD').toDate();
-  const end = dayjs(m[2],'YYYY-MM-DD').toDate();
-  return rows.filter(r => r.Date >= start && r.Date <= end);
+  const fromTxt = (document.getElementById('fromDate').value || '').trim();
+  const toTxt   = (document.getElementById('toDate').value || '').trim();
+  if (!fromTxt && !toTxt) return rows;
+  let from = fromTxt ? dayjs(fromTxt, 'YYYY-MM-DD', true).toDate() : null;
+  let to   = toTxt   ? dayjs(toTxt,   'YYYY-MM-DD', true).toDate() : null;
+  let toNext = to ? dayjs(to).add(1,'day').toDate() : null;
+  return rows.filter(r => { const t = r.Date; if (from && t < from) return false; if (toNext && t >= toNext) return false; return true; });
 }
 
-function buildGroupAgg() {
-  const byProd = groupBy(rawRows, 'Product');
-  groupAgg = Object.entries(byProd).map(([prod, rows]) => {
-    rows = rows.slice().sort((a,b)=>a.Date-b.Date);
-    const revenue = rows.reduce((s,r)=> s + (r.AmountOfSold_ALL ?? 0), 0);
-    const cost = rows.reduce((s,r)=> s + (r.CostAmountOfSold_ALL ?? 0), 0);
-    const units = rows.reduce((s,r)=> s + (r.NumItemSold_ALL ?? 0), 0);
-    const margin = revenue - cost;
-    return {Product: prod, revenue, cost, units, margin, rows};
-  });
-}
-
-/* aggregate daily when product = ALL; compute weighted averages for prices, admin, cached */
+/* aggregate daily for ALL */
 function aggregateDaily(rows){
   const byDay = {};
   rows.forEach(r=>{
     const key = dayjs(r.Date).format('YYYY-MM-DD');
-    if(!byDay[key]) byDay[key] = {Date:new Date(r.Date), units:0, revenue:0, cost:0, stock:0,
-                                  priceUnits:0, unitsForPrice:0,
-                                  adminUnits:0, unitsForAdmin:0,
-                                  cachedUnits:0, unitsForCached:0};
+    if(!byDay[key]) byDay[key] = {Date:new Date(r.Date),
+      units:0, unitsInvent:0, revenue:0, cost:0, stock:0,
+      priceUnits:0, unitsForPrice:0,
+      adminUnits:0, unitsForAdmin:0,
+      cachedUnits:0, unitsForCached:0,
+      marginInvUnits:0, unitsForMarginInv:0
+    };
     const d=byDay[key];
     const units = (r.NumItemSold_ALL||0);
+    const unitsInv = (r.NumItemSold_Invent||0);
     const price = r.AvgSalePrice_ALL;
     const costAmt = (r.CostAmountOfSold_ALL||0);
     d.units += units;
+    d.unitsInvent += unitsInv;
     d.revenue += (r.AmountOfSold_ALL||0);
     d.cost += costAmt;
     d.stock += (r.TotalMaxCurrentStock||0);
     if (price!=null && units>0) { d.priceUnits += price*units; d.unitsForPrice += units; }
     if (r.AvgAdminCostPrice!=null && units>0) { d.adminUnits += r.AvgAdminCostPrice*units; d.unitsForAdmin += units; }
     if (r.AvgCachedListPrice!=null && units>0) { d.cachedUnits += r.AvgCachedListPrice*units; d.unitsForCached += units; }
+    if (r.Margin_Invent!=null && units>0) { d.marginInvUnits += r.Margin_Invent*units; d.unitsForMarginInv += units; }
   });
   return Object.values(byDay).sort((a,b)=>a.Date-b.Date).map(d=>{
     const avgPrice = d.unitsForPrice>0 ? d.priceUnits/d.unitsForPrice : null;
@@ -364,14 +465,17 @@ function aggregateDaily(rows){
     const marginPct = d.revenue>0 ? (d.revenue - d.cost)/d.revenue : null;
     const avgAdmin = d.unitsForAdmin>0 ? d.adminUnits/d.unitsForAdmin : null;
     const avgCached = d.unitsForCached>0 ? d.cachedUnits/d.unitsForCached : null;
+    const avgMarginInv = d.unitsForMarginInv>0 ? d.marginInvUnits/d.unitsForMarginInv : null;
     return {
       Date:d.Date,
       NumItemSold_ALL:d.units,
+      NumItemSold_Invent:d.unitsInvent,
       AmountOfSold_ALL:d.revenue,
       CostAmountOfSold_ALL:d.cost,
       AvgSalePrice_ALL: avgPrice,
       AvgCostPrice_ALL: avgCostPerUnit,
       Margin_All: marginPct,
+      Margin_Invent: avgMarginInv,
       TotalMaxCurrentStock:d.stock,
       AvgAdminCostPrice: avgAdmin,
       AvgCachedListPrice: avgCached
@@ -385,7 +489,7 @@ function calcElasticity(rows) {
     const u=r.NumItemSold_ALL, p=r.AvgSalePrice_ALL;
     if (!u || !p || u<=0 || p<=0) return;
     const stk=r.TotalMaxCurrentStock;
-    if (stk && u/stk>0.9) return; // stock-constrained
+    if (stk && u/stk>0.9) return;
     xs.push(Math.log(p)); ys.push(Math.log(u));
   });
   if (xs.length<3) return null;
@@ -426,7 +530,7 @@ function computeKPIs(selectedRows, groupRows, selectedProduct, suggestedPrice) {
   const baselineMarginTaka = (baseCached!=null && baseAdmin!=null) ? (baseCached - baseAdmin) : null;
   const baselineMarginPct = (baseCached>0 && baselineMarginTaka!=null) ? baselineMarginTaka/baseCached : null;
 
-  const suggested = (suggestedPrice!=null && suggestedPrice>0) ? suggestedPrice : null;
+  const suggested = (suggestedPrice!=null && suggestedPrice>0) ? suggestedPrice : baseCached;
   const suggestedMarginTaka = (suggested!=null && baseAdmin!=null) ? (suggested - baseAdmin) : null;
   const suggestedMarginPct = (suggested>0 && suggestedMarginTaka!=null) ? suggestedMarginTaka/suggested : null;
 
@@ -445,88 +549,63 @@ function computeKPIs(selectedRows, groupRows, selectedProduct, suggestedPrice) {
 
   const elasticity = (selectedProduct==='__ALL__') ? null : calcElasticity(rows);
 
-  const baseWindow = Math.max(7, Math.min(90, parseNum(document.getElementById('baselineDays').value) || 14));
-  const recentRows = rows.slice(-baseWindow);
-  const basePrice = average(recentRows.map(r=> r.AvgSalePrice_ALL || 0).filter(x=>x>0)) || baseCached || null;
-  const baseUnitsPerDay = average(recentRows.map(r=> r.NumItemSold_ALL || 0)) || 0;
-
-  const pNew = suggested || baseCached || basePrice || null;
-  const pBase = basePrice || pNew;
-
-  let unitsNewPerDay = baseUnitsPerDay;
-  if (elasticity!=null && pNew && pBase) {
-    unitsNewPerDay = baseUnitsPerDay * Math.pow(pNew/pBase, elasticity);
-  }
-  const admin = baseAdmin || average(recentRows.map(r=> r.AvgAdminCostPrice || 0).filter(x=>x>0)) || 0;
-
-  const daysHorizon=30;
-  const baseProfit30=(pBase-admin)*baseUnitsPerDay*daysHorizon;
-  const newProfit30 =(pNew -admin)*unitsNewPerDay*daysHorizon;
-  const deltaProfit = newProfit30 - baseProfit30;
-
-  let promoCost=0, roi=null;
-  if (pNew < pBase) { promoCost=(pBase-pNew)*unitsNewPerDay*daysHorizon; roi=promoCost>0? (deltaProfit/promoCost):null; }
-
   return {
     totalRevenue,totalCost,totalUnits,grossMargin,marginPct,
     stockOutDays,withStockDays,
     baselineMarginTaka,baselineMarginPct,suggestedMarginTaka,suggestedMarginPct,
     contribRevenuePct,contribMarginPct,stdevUnits,invTurn,
     elasticity,
-    pBase,pNew,baseUnitsPerDay,unitsNewPerDay,admin,
-    baseProfit30,newProfit30,deltaProfit,promoCost,roi,
-    lastDate: rows.length? rows[rows.length-1].Date:null,
-    lastAdmin: baseAdmin, lastCached: baseCached
+    latestRow:last
   };
 }
 
-/* ---------------- Rendering ---------------- */
+function destroyChart(id){ if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
 function recalcAndRender(){
   if (!rawRows.length) return;
   const prod = document.getElementById('productSelect').value || '__ALL__';
   const suggestedPrice = parseNum(document.getElementById('suggestedPrice').value);
-  const filtered = filterByDateRange(rawRows);
+  const filtered = filterByDateRange(rawRows).slice().sort((a,b)=>a.Date-b.Date);
 
-  const selectedRows = (prod==='__ALL__')
-    ? aggregateDaily(filtered)
-    : filtered.filter(r=> r.Product===prod).sort((a,b)=>a.Date-b.Date);
+  const selectedRows = (prod==='__ALL__') ? aggregateDaily(filtered)
+                                          : filtered.filter(r=> r.Product===prod);
 
-  const groupRows = filtered;
-
+  // Pre-fill suggested price if empty
   if (prod!=='__ALL__' && (!suggestedPrice || isNaN(suggestedPrice)) && selectedRows.length){
-    const latest = filtered.filter(r=>r.Product===prod).sort((a,b)=>a.Date-b.Date).at(-1);
+    const latest = filtered.filter(r=>r.Product===prod).slice(-1)[0];
     if (latest && latest.AvgCachedListPrice) document.getElementById('suggestedPrice').value = Number(latest.AvgCachedListPrice).toFixed(2);
   }
 
-  const K = computeKPIs(
-    (prod==='__ALL__') ? selectedRows : filtered.filter(r=>r.Product===prod).sort((a,b)=>a.Date-b.Date),
-    groupRows, prod, parseNum(document.getElementById('suggestedPrice').value));
-
+  const K = computeKPIs((prod==='__ALL__') ? selectedRows : filtered.filter(r=>r.Product===prod), filtered, prod, parseNum(document.getElementById('suggestedPrice').value));
+  renderLatestBand(K, prod);
   renderKPIs(K);
-  renderTrends(selectedRows);
+  renderTrendCharts(selectedRows);
   renderStockVsSales(selectedRows);
-  renderMarginVsPrice(selectedRows);
-  renderGroupContrib(groupRows);
-  renderCannibalizationBars(groupRows, prod);
-  renderExtras(selectedRows);
-  renderDetailsTable((prod==='__ALL__') ? selectedRows : filtered.filter(r=>r.Product===prod).sort((a,b)=>a.Date-b.Date));
-
-  updateLatestPanel({
-    product: prod==='__ALL__' ? 'All products' : prod,
-    date: K.lastDate, admin: K.lastAdmin, cached: K.lastCached,
-    baselineMargin: (K.lastAdmin!=null && K.lastCached!=null) ? (K.lastCached - K.lastAdmin) : null,
-    suggestedMargin: (K.lastAdmin!=null && K.pNew!=null) ? (K.pNew - K.lastAdmin) : null
-  });
+  renderMarginVsCost(selectedRows);
+  renderMarketShare(selectedRows);
+  renderGroupContrib(filtered);
+  renderCannibalizationBars(filtered, prod);
+  renderExtras(prod, selectedRows, filtered);
+  renderDetailsTable((prod==='__ALL__') ? selectedRows : filtered.filter(r=>r.Product===prod));
 }
 
-function updateLatestPanel(info){
-  const {product,date,admin,cached,baselineMargin,suggestedMargin} = info || {};
-  document.getElementById('latestProduct').textContent = product || '—';
-  document.getElementById('latestDate').textContent = date ? `Latest date: ${dayjs(date).format('YYYY-MM-DD')}` : (product==='All products' ? '— (aggregated)' : '—');
-  document.getElementById('latestAdmin').textContent = admin!=null ? fmt(admin,2) : '—';
-  document.getElementById('latestCached').textContent = cached!=null ? fmt(cached,2) : '—';
-  document.getElementById('latestBaselineMargin').textContent = baselineMargin!=null ? fmt(baselineMargin,2) : '—';
-  document.getElementById('latestSuggestedMargin').textContent = suggestedMargin!=null ? fmt(suggestedMargin,2) : '—';
+function renderLatestBand(K, prod){
+  const band = document.getElementById('latestBand');
+  if (!rawRows.length){ band.style.display='none'; return; }
+  band.style.display='flex';
+
+  const name = (prod==='__ALL__') ? 'All products' : prod;
+  const last = K.latestRow || {};
+  const latestDate = last?.Date ? dayjs(last.Date).format('YYYY-MM-DD') : '—';
+  const latestAdmin = last?.AvgAdminCostPrice ?? null;
+  const latestCached = last?.AvgCachedListPrice ?? null;
+
+  document.getElementById('lbName').textContent = name;
+  document.getElementById('lbDate').textContent = latestDate;
+  document.getElementById('lbAdmin').textContent = fmt(latestAdmin,2);
+  document.getElementById('lbCached').textContent = fmt(latestCached,2);
+  document.getElementById('lbBaseMargin').textContent = fmt(K.baselineMarginTaka,2);
+  document.getElementById('lbSuggMargin').textContent = fmt(K.suggestedMarginTaka,2);
 }
 
 function renderKPIs(K){
@@ -537,42 +616,33 @@ function renderKPIs(K){
     {label:'Gross Margin %', val: pct(K.marginPct)},
     {label:'Units Sold (sum)', val: fmt0(K.totalUnits)},
     {label:'Stock-out Days', val: `${K.stockOutDays}/${K.withStockDays || '—'}`},
-
     {label:'Baseline Margin/Unit (৳)', val: fmt(K.baselineMarginTaka,2)},
     {label:'Baseline Margin %', val: pct(K.baselineMarginPct)},
     {label:'Suggested Margin/Unit (৳)', val: fmt(K.suggestedMarginTaka,2)},
     {label:'Suggested Margin %', val: pct(K.suggestedMarginPct)},
-
     {label:'Revenue Contribution', val: pct(K.contribRevenuePct)},
     {label:'Margin Contribution', val: pct(K.contribMarginPct)},
     {label:'Sales Volatility (σ units)', val: fmt(K.stdevUnits,2)},
     {label:'Inventory Turnover (proxy)', val: K.invTurn==null?'—':fmt(K.invTurn,2)},
-    {label:'Price Elasticity (β)', val: K.elasticity==null?'—':fmt(K.elasticity,3)},
-    {label:'(info) Elasticity only for single product', val: '' }
+    {label:'Price Elasticity (β)', val: K.elasticity==null?'—':fmt(K.elasticity,3)}
   ];
   document.getElementById('kpiGrid').innerHTML = kpi.map(x=>`
     <div class="kpi"><div class="label">${x.label}</div><div class="value">${x.val}</div></div>
   `).join('');
 }
 
-function destroyChart(id){ if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
-
-/* ---------- Trend charts ---------- */
-function renderTrends(rows){
+function renderTrendCharts(rows){
   const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
   const units = rows.map(r=> r.NumItemSold_ALL || 0);
   const price = rows.map(r=> r.AvgSalePrice_ALL || 0);
-
   destroyChart('trendChart');
   charts.trendChart = new Chart(document.getElementById('trendChart'), {
     type:'bar',
-    data:{ labels,
-      datasets:[
-        {label:'Units', data:units, yAxisID:'y', borderWidth:1},
-        {label:'Price (৳)', data:price, type:'line', yAxisID:'y1', borderWidth:2, tension:0.2}
-      ]},
-    options:{
-      responsive:true, maintainAspectRatio:false, animation:false,
+    data:{ labels, datasets:[
+      {label:'Units', data:units, yAxisID:'y', borderWidth:1},
+      {label:'Price (৳)', data:price, type:'line', yAxisID:'y1', borderWidth:2, tension:0.2}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
       scales:{ y:{beginAtZero:true, title:{display:true,text:'Units'}},
                y1:{beginAtZero:false, position:'right', title:{display:true,text:'Price (৳)'}}},
       plugins:{ legend:{position:'bottom'} }
@@ -584,17 +654,14 @@ function renderStockVsSales(rows){
   const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
   const stock = rows.map(r=> r.TotalMaxCurrentStock || 0);
   const units = rows.map(r=> r.NumItemSold_ALL || 0);
-
   destroyChart('stockSalesChart');
   charts.stockSalesChart = new Chart(document.getElementById('stockSalesChart'), {
     type:'line',
-    data:{ labels,
-      datasets:[
-        {label:'Stock', data:stock, borderWidth:2, tension:0.2, yAxisID:'y'},
-        {label:'Sales (Units)', data:units, borderWidth:2, tension:0.2, yAxisID:'y1'}
-      ]},
-    options:{
-      responsive:true, maintainAspectRatio:false, animation:false,
+    data:{ labels, datasets:[
+      {label:'Stock', data:stock, borderWidth:2, tension:0.2, yAxisID:'y'},
+      {label:'Sales (Units)', data:units, borderWidth:2, tension:0.2, yAxisID:'y1'}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
       scales:{ y:{beginAtZero:true, title:{display:true,text:'Stock'}},
                y1:{beginAtZero:true, position:'right', title:{display:true,text:'Units'}}},
       plugins:{ legend:{position:'bottom'} }
@@ -602,32 +669,45 @@ function renderStockVsSales(rows){
   });
 }
 
-function renderMarginVsPrice(rows){
+/* Margin % (Margin_Invent) & Cost price (AvgAdminCostPrice) */
+function renderMarginVsCost(rows){
   const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
-  const marginPct = rows.map(r=>{
-    const rev=r.AmountOfSold_ALL||0, cost=r.CostAmountOfSold_ALL||0;
-    return rev>0 ? (rev-cost)/rev : null;
-  }).map(x=> x==null? null : x*100);
-  const price = rows.map(r=> r.AvgSalePrice_ALL || 0);
-
-  destroyChart('marginPriceChart');
-  charts.marginPriceChart = new Chart(document.getElementById('marginPriceChart'), {
+  const marginInvPct = rows.map(r=> (r.Margin_Invent==null? null : r.Margin_Invent*100));
+  const adminPrice = rows.map(r=> r.AvgAdminCostPrice || 0);
+  destroyChart('marginCostChart');
+  charts.marginCostChart = new Chart(document.getElementById('marginCostChart'), {
     type:'line',
-    data:{ labels,
-      datasets:[
-        {label:'Margin %', data:marginPct, borderWidth:2, tension:0.2, yAxisID:'y'},
-        {label:'Price (৳)', data:price, borderWidth:2, tension:0.2, yAxisID:'y1'}
-      ]},
-    options:{
-      responsive:true, maintainAspectRatio:false, animation:false,
-      scales:{ y:{beginAtZero:true, title:{display:true,text:'Margin %'}},
-               y1:{beginAtZero:false, position:'right', title:{display:true,text:'Price (৳)'}}},
+    data:{ labels, datasets:[
+      {label:'Margin % (Invent)', data:marginInvPct, borderWidth:2, tension:0.2, yAxisID:'y'},
+      {label:'Admin Cost (৳)', data:adminPrice, borderWidth:2, tension:0.2, yAxisID:'y1'}
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{ y:{beginAtZero:false, title:{display:true,text:'Margin %'}},
+               y1:{beginAtZero:false, position:'right', title:{display:true,text:'AvgAdminCostPrice (৳)'}}},
       plugins:{ legend:{position:'bottom'} }
     }
   });
 }
 
-/* ---------- Group contribution: sorted top 10 ---------- */
+/* Market Percentage time series */
+function renderMarketShare(rows){
+  const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
+  const marketPct = rows.map(r=>{
+    const a = r.NumItemSold_Invent, b = r.NumItemSold_ALL;
+    if (a==null || b==null || b===0) return null;
+    return (1 - (a/b)) * 100;
+  });
+  destroyChart('marketShareChart');
+  charts.marketShareChart = new Chart(document.getElementById('marketShareChart'), {
+    type:'line',
+    data:{ labels, datasets:[{label:'Market %', data:marketPct, borderWidth:2, tension:0.2, spanGaps:true}]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      scales:{ y:{beginAtZero:true, title:{display:true,text:'%'} } },
+      plugins:{ legend:{position:'bottom'} }
+    }
+  });
+}
+
 function renderGroupContrib(groupRows){
   const byProd = groupBy(groupRows, 'Product');
   const prods = Object.keys(byProd).map(p=>{
@@ -636,15 +716,10 @@ function renderGroupContrib(groupRows){
     const mar = rows.reduce((s,r)=> s+((r.AmountOfSold_ALL||0)-(r.CostAmountOfSold_ALL||0)), 0);
     return {p, rev, mar};
   });
-
   const revSum = prods.reduce((s,x)=>s+x.rev,0) || 1e-9;
   const marSum = prods.reduce((s,x)=>s+x.mar,0) || 1e-9;
-
-  const ranked = prods
-    .map(x=> ({...x, revShare:100*x.rev/revSum, marShare:100*(x.mar/marSum)}))
-    .sort((a,b)=> b.revShare - a.revShare)
-    .slice(0,10);
-
+  const ranked = prods.map(x=> ({...x, revShare:100*x.rev/revSum, marShare:100*(x.mar/marSum)}))
+                      .sort((a,b)=> b.revShare - a.revShare).slice(0,10);
   destroyChart('contribChart');
   charts.contribChart = new Chart(document.getElementById('contribChart'), {
     type:'bar',
@@ -658,7 +733,6 @@ function renderGroupContrib(groupRows){
   });
 }
 
-/* ---------- Cannibalization: bar chart ---------- */
 function renderCannibalizationBars(groupRows, selectedProduct){
   const title = document.getElementById('cannibalTitle');
   const hint  = document.getElementById('cannibalHint');
@@ -679,7 +753,6 @@ function renderCannibalizationBars(groupRows, selectedProduct){
   let labels = [], values = [];
 
   if (selectedProduct==='__ALL__') {
-    // Show top 10 most negative correlated pairs across all products
     title.textContent = 'Cannibalization — Top 10 Most Negative Pairs';
     hint.textContent  = 'Pairs with lowest ρ across products (units vs units).';
     const pairs = [];
@@ -694,7 +767,6 @@ function renderCannibalizationBars(groupRows, selectedProduct){
     labels = top.map(x=>x.label);
     values = top.map(x=>x.rho);
   } else {
-    // Correlation vs selected product
     title.textContent = 'Cannibalization vs Selected (Top 10 correlations)';
     hint.textContent  = 'More negative ρ ⇒ stronger cannibalization signal.';
     const targetVec = vecFor(selectedProduct);
@@ -717,11 +789,13 @@ function renderCannibalizationBars(groupRows, selectedProduct){
   });
 }
 
-/* ---------- Extra charts ---------- */
-function renderExtras(rows){
-  // Scatter: price vs units + trendline
-  const points = rows.filter(r=> (r.AvgSalePrice_ALL>0 && r.NumItemSold_ALL>0))
-                     .map(r=> ({x:r.AvgSalePrice_ALL, y:r.NumItemSold_ALL}));
+/* Deeper insights updates */
+function renderExtras(prod, selectedRows, filteredRows){
+  // Scatter for selected selection
+  let scatterRows = selectedRows;
+  if (prod==='__ALL__') scatterRows = filteredRows;
+  const points = scatterRows.filter(r=> (r.AvgSalePrice_ALL>0 && r.NumItemSold_ALL>0))
+                            .map(r=> ({x:r.AvgSalePrice_ALL, y:r.NumItemSold_ALL}));
   let a=0,b=0;
   if(points.length>=2){
     const n=points.length;
@@ -747,57 +821,99 @@ function renderExtras(rows){
     }
   });
 
-  // Rolling revenue (7-day)
-  const labels = rows.map(r=> dayjs(r.Date).format('YYYY-MM-DD'));
-  const revenue = rows.map(r=> r.AmountOfSold_ALL||0);
-  const rolling = [];
-  let sum=0;
-  for(let i=0;i<revenue.length;i++){ sum+=revenue[i]; if(i>=6) sum-=revenue[i-6]; rolling.push(i>=6? sum/7 : sum/(i+1)); }
-  destroyChart('rollingRevChart');
-  charts.rollingRevChart = new Chart(document.getElementById('rollingRevChart'), {
-    type:'line',
-    data:{ labels, datasets:[{label:'Rolling 7-day Avg Revenue (৳)', data:rolling, borderWidth:2, tension:0.2}]},
+  // Scatter for ALL products colored by product
+  const byProd = groupBy(filteredRows, 'Product');
+  const productNames = Object.keys(byProd).sort((a,b)=>a.localeCompare(b));
+  const palette = productNames.map((_,i)=>{
+    const h = (i*47)%360; return `hsl(${h} 65% 60%)`;
+  });
+
+  const datasets = productNames.map((p,idx)=>{
+    const pts = byProd[p].filter(r=> r.AvgSalePrice_ALL>0 && r.NumItemSold_ALL>0)
+                         .map(r=>({x:r.AvgSalePrice_ALL,y:r.NumItemSold_ALL, p}));
+    return {
+      label: p, data: pts, showLine:false, pointRadius:3,
+      borderColor: palette[idx], backgroundColor: palette[idx], hidden:false
+    };
+  });
+
+  destroyChart('scatterAllChart');
+  charts.scatterAllChart = new Chart(document.getElementById('scatterAllChart'), {
+    type:'scatter',
+    data:{ datasets },
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
-      plugins:{ legend:{position:'bottom'} },
-      scales:{ y:{ beginAtZero:true, title:{display:true, text:'৳'} } }
+      plugins:{ legend:{display:false}, tooltip:{
+        callbacks:{
+          label: (ctx)=>{
+            const d=ctx.raw||{}; const price=d.x; const units=d.y; const name=d.p||ctx.dataset.label;
+            return `${name}: ৳${fmt(price,2)} | Units ${fmt0(units)}`;
+          }
+        }
+      }},
+      scales:{ x:{ title:{display:true, text:'AvgSalePrice (৳)'} },
+               y:{ title:{display:true, text:'Units'}, beginAtZero:true } }
     }
   });
 
-  // Margin histogram
-  const margins = rows.map(r=>{
-    const rev=r.AmountOfSold_ALL||0, cost=r.CostAmountOfSold_ALL||0;
-    return rev>0 ? (rev-cost)/rev : null;
-  }).filter(x=>x!=null);
-  const bins = [0,0.05,0.10,0.15,0.20,0.25,0.30,0.40,0.50,0.60];
-  const counts = new Array(bins.length-1).fill(0);
-  margins.forEach(m=>{
-    for(let i=0;i<bins.length-1;i++){ if(m>=bins[i] && m<bins[i+1]){ counts[i]++; break; } }
-  });
-  destroyChart('marginHistChart');
-  charts.marginHistChart = new Chart(document.getElementById('marginHistChart'), {
+  // Latest by product charts
+  const latest = productNames.map(p=>{
+    const rows = byProd[p];
+    const r = rows.slice().sort((a,b)=>a.Date-b.Date).slice(-1)[0];
+    const admin = r?.AvgAdminCostPrice ?? null;
+    const cached = r?.AvgCachedListPrice ?? null;
+    const marginTk = (cached!=null && admin!=null)? (cached-admin):null;
+    const marginPct = (cached>0 && marginTk!=null)? (marginTk/cached)*100 : null;
+    return {p, admin, cached, marginTk, marginPct};
+  }).filter(x=> x.cached!=null || x.admin!=null);
+
+  const labels = latest.map(x=>x.p);
+
+  // Cached
+  destroyChart('latestCachedChart');
+  charts.latestCachedChart = new Chart(document.getElementById('latestCachedChart'), {
     type:'bar',
-    data:{ labels: bins.slice(0,-1).map((b,i)=> `${Math.round(b*100)}–${Math.round(bins[i+1]*100)}%`),
-           datasets:[{label:'Days in Bin', data:counts, borderWidth:1}] },
+    data:{ labels, datasets:[{label:'Cached Price (৳)', data: latest.map(x=>x.cached), borderWidth:1}]},
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
-      plugins:{ legend:{display:false} },
-      scales:{ y:{ beginAtZero:true, title:{display:true, text:'Days'} } }
-    }
+      plugins:{ legend:{position:'bottom'} }, scales:{ y:{ beginAtZero:false, title:{display:true,text:'৳'} } } }
+  });
+
+  // Admin
+  destroyChart('latestAdminChart');
+  charts.latestAdminChart = new Chart(document.getElementById('latestAdminChart'), {
+    type:'bar',
+    data:{ labels, datasets:[{label:'Admin Cost (৳)', data: latest.map(x=>x.admin), borderWidth:1}]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{position:'bottom'} }, scales:{ y:{ beginAtZero:false, title:{display:true,text:'৳'} } } }
+  });
+
+  // Margin %
+  destroyChart('latestMarginChart');
+  charts.latestMarginChart = new Chart(document.getElementById('latestMarginChart'), {
+    type:'bar',
+    data:{ labels, datasets:[{label:'Margin % (latest)', data: latest.map(x=>x.marginPct), borderWidth:1}]},
+    options:{ responsive:true, maintainAspectRatio:false, animation:false,
+      plugins:{ legend:{position:'bottom'} }, scales:{ y:{ beginAtZero:true, title:{display:true,text:'Margin %'} } } }
   });
 }
 
-/* ---------- Details table ---------- */
 function renderDetailsTable(rows){
-  const cols=['Date','NumItemSold_ALL','AvgSalePrice_ALL','AvgCostPrice_ALL','Margin_All','TotalMaxCurrentStock','AvgAdminCostPrice','AvgCachedListPrice','AmountOfSold_ALL','CostAmountOfSold_ALL'];
+  const cols=['Date','Product','PVID','SoldInKg','NumItemSold_ALL','NumItemSold_Invent','AvgSalePrice_ALL','AvgCostPrice_ALL','AvgCostPrice_Invent','Margin_All','Margin_Invent','TotalMaxCurrentStock','AvgAdminCostPrice','AvgCachedListPrice','AmountOfSold_ALL','CostAmountOfSold_ALL'];
   const thead=document.querySelector('#detailTable thead');
   const tbody=document.querySelector('#detailTable tbody');
   thead.innerHTML = `<tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>`;
   tbody.innerHTML = rows.slice().sort((a,b)=>a.Date-b.Date).map(r=>`
     <tr>
       <td>${dayjs(r.Date).format('YYYY-MM-DD')}</td>
+      <td>${r.Product ?? '—'}</td>
+      <td>${r.PVID ?? '—'}</td>
+      <td>${fmt(r.SoldInKg,2)}</td>
       <td>${fmt0(r.NumItemSold_ALL)}</td>
+      <td>${fmt0(r.NumItemSold_Invent)}</td>
       <td>${fmt(r.AvgSalePrice_ALL,2)}</td>
       <td>${fmt(r.AvgCostPrice_ALL,2)}</td>
+      <td>${fmt(r.AvgCostPrice_Invent,2)}</td>
       <td>${pct(r.Margin_All)}</td>
+      <td>${pct(r.Margin_Invent)}</td>
       <td>${fmt0(r.TotalMaxCurrentStock)}</td>
       <td>${fmt(r.AvgAdminCostPrice,2)}</td>
       <td>${fmt(r.AvgCachedListPrice,2)}</td>
@@ -809,4 +925,3 @@ function renderDetailsTable(rows){
 
 </body>
 </html>
-
