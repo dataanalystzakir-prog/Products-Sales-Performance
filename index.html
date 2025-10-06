@@ -218,7 +218,7 @@
 
   <div class="grid" style="margin-top:12px;">
     <div class="card" style="grid-column: span 12;">
-      <h3>Market Percentage (1 − NumItemSold_Invent / NumItemSold_ALL) × 100</h3>
+      <h3>Market Purchase Percentage (1 − NumItemSold_Invent / NumItemSold_ALL) × 100</h3>
       <canvas id="marketShareChart" class="chart-fixed"></canvas>
     </div>
   </div>
@@ -661,7 +661,7 @@ function renderMarketShare(rows){
   destroyChart('marketShareChart');
   charts.marketShareChart = new Chart(document.getElementById('marketShareChart'), {
     type:'line',
-    data:{ labels, datasets:[{label:'Market %', data:marketPct, borderWidth:2, tension:0.2, spanGaps:true}]},
+    data:{ labels, datasets:[{label:'Market Purchase %', data:marketPct, borderWidth:2, tension:0.2, spanGaps:true}]},
     options:{ responsive:true, maintainAspectRatio:false, animation:false,
       scales:{ y:{beginAtZero:true, title:{display:true,text:'%'} } },
       plugins:{ legend:{position:'bottom'} }
